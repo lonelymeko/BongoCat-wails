@@ -1,0 +1,44 @@
+version: '3'
+
+# Minimal, CLI-independent task runner for the Wails v3 port of BongoCat.
+# (For the full `wails3 dev/build/package` flow with native packaging, see
+# MIGRATION-WAILS.md — it explains how to drop in the canonical build/ scaffold.)
+
+vars:
+  APP_NAME: BongoCat
+  BIN: bin/{{.APP_NAME}}{{if eq OS "windows"}}.exe{{end}}
+
+tasks:
+  install:
+    desc: Install frontend dependencies
+    cmds:
+      - pnpm install
+
+  dev:frontend:
+    desc: 'Dev: start the Vite dev server (run in terminal 1)'
+    cmds:
+      - pnpm dev
+
+  dev:app:
+    desc: 'Dev: run the Go/Wails app against the Vite dev server (terminal 2)'
+    env:
+      FRONTEND_DEVSERVER_URL: http://localhost:1420
+    cmds:
+      - go run .
+
+  build:frontend:
+    desc: Build the frontend into dist/
+    cmds:
+      - pnpm exec vite build
+
+  build:
+    desc: Build a production binary with the frontend embedded
+    deps: [build:frontend]
+    cmds:
+      - go build -tags production -ldflags "-w -s" -o {{.BIN}} .
+
+  run:
+    desc: Build then run the production binary
+    deps: [build]
+    cmds:
+      - '{{.BIN}}'

@@ -21,3 +21,6 @@ target
 *.njsproj
 *.sln
 *.sw?
+
+# Go build output
+bin
