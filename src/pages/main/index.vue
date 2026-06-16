@@ -39,7 +39,10 @@ const resizing = ref(false)
 const backgroundImagePath = ref<string>()
 const { stickActive } = useGamepad()
 
-onMounted(startListening)
+onMounted(() => {
+  void (appWindow as any).setBackgroundColour?.(0, 0, 0, 0)
+  startListening()
+})
 
 onUnmounted(handleDestroy)
 
@@ -61,7 +64,6 @@ watch(() => modelStore.currentModel, async (model) => {
   await handleLoad()
 
   const path = join(model.path, 'resources', 'background.png')
-
   const existed = await exists(path)
 
   backgroundImagePath.value = existed ? convertFileSrc(path) : void 0
@@ -179,11 +181,12 @@ function handleMouseMove(event: MouseEvent) {
 
 <template>
   <div
-    class="relative size-screen overflow-hidden children:(absolute size-full)"
+    class="bongo-drag-region relative size-screen overflow-hidden bg-transparent children:(absolute size-full)"
     :class="{ '-scale-x-100': catStore.model.mirror }"
     :style="{
-      opacity: catStore.window.opacity / 100,
-      borderRadius: `${catStore.window.radius}%`,
+      'opacity': catStore.window.opacity / 100,
+      'borderRadius': `${catStore.window.radius}%`,
+      '--wails-draggable': 'drag',
     }"
     @contextmenu="handleContextmenu"
     @mousedown="handleMouseDown"
@@ -206,7 +209,7 @@ function handleMouseMove(event: MouseEvent) {
 
     <div
       v-show="resizing || !modelStore.modelReady"
-      class="flex items-center justify-center bg-black"
+      class="flex items-center justify-center bg-transparent"
     >
       <span class="text-center text-[10vw] text-[#fff]">
         {{ resizing ? $t('pages.main.hints.redrawing') : $t('pages.main.hints.switching') }}

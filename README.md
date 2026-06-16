@@ -36,7 +36,7 @@
 | 前端     | Vue 3 · Vite 6 · Pinia · Live2D(pixi.js + easy-live2d)                                                                                      |
 | 后端     | Go · [Wails v3](https://v3.wails.io)(alpha)                                                                                                 |
 | 桥接     | `src/bridge/*` 把 `@tauri-apps/*` 导入经 Vite alias 重定向到 [`@wailsio/runtime`](https://www.npmjs.com/package/@wailsio/runtime) + Go 服务 |
-| 原生能力 | 全局键鼠:[`robotn/gohook`](https://github.com/robotn/gohook) · 窗口/托盘/单实例:Wails                                                       |
+| 原生能力 | macOS 全局键鼠:CGEventTap · 其他平台键鼠:[`robotn/gohook`](https://github.com/robotn/gohook) · 窗口/托盘/单实例:Wails                       |
 
 简版架构:
 
@@ -61,7 +61,7 @@ Vue 组件  ──import '@tauri-apps/*'──►  vite alias  ──►  src/br
   - **macOS**:Xcode Command Line Tools(`xcode-select --install`)
   - **Windows**:一个 C 编译器(MSYS2/MinGW 的 `gcc`)—— gohook 的全局 hook 需要
   - **Linux(x11)**:`webkit2gtk` / `gtk` 开发包 + `libX11/libXtst/libxcb*` 开发头
-- 可选:[`wails3` CLI](https://v3.wails.io)(仅打包 dmg/installer 时需要)
+- [`wails3` CLI](https://v3.wails.io)
   `go install github.com/wailsapp/wails/v3/cmd/wails3@latest`
 
 ## 🚀 快速开始
@@ -71,48 +71,55 @@ git clone https://github.com/lonelymeko/BongoCat-wails.git
 cd BongoCat-wails
 
 pnpm install            # 装前端依赖
-pnpm exec vite build    # ❗首次必须先构建一次前端:main.go 的 //go:embed 需要 dist/ 存在
+wails3 dev -config ./build/config.yml -port 1421
 ```
 
 ## 🛠 开发
 
 > macOS 首次运行前,请到 **系统设置 → 隐私与安全性 → 输入监控** 给 BongoCat 授权,否则收不到键鼠事件,猫不动。
+>
+> 本仓库使用 **Wails v3**。不要执行 `wails dev`;那是 Wails v2 CLI,会寻找不存在的 `wails.json`。请使用 `wails3`。
 
-### 方式 A:不依赖 wails3 CLI(推荐先用这个跑通)
+### 主开发方式:wails3 dev
+
+```bash
+wails3 dev -config ./build/config.yml -port 1421
+```
+
+如果你的 shell 里同时装了 Wails v2 和 v3,建议显式使用 v3 CLI:
+
+```bash
+export PATH="$HOME/go/bin:$PATH"
+/Users/xixiu/go/bin/wails3 dev -config ./build/config.yml -port 1421
+```
+
+开发端口默认用 `1421`,避免和其他本地服务冲突。`build/config.yml` 会启动 Vite dev server 并运行 Wails app。
+
+### 备用方式:手动跑前端和 Go app
 
 开两个终端:
 
 ```bash
-# 终端 1:Vite dev server(热更新,:1420)
-pnpm dev                # 或 task dev:frontend
+# 终端 1:Vite dev server
+pnpm dev
 
 # 终端 2:Go/Wails app 连上 dev server
-FRONTEND_DEVSERVER_URL=http://localhost:1420 go run .   # 或 task dev:app
+FRONTEND_DEVSERVER_URL=http://localhost:1420 go run .
 ```
 
 app 在开发构建下读取 `FRONTEND_DEVSERVER_URL` 直接用 Vite;未设置时回退到内嵌的 `dist`。
 
-### 方式 B:wails3 CLI(热重载更完整)
-
-需要先补齐平台脚手架,见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md) 的「完整打包」一节,然后:
-
-```bash
-wails3 dev
-```
-
 ## 🏗 构建
 
 ```bash
-# 生产二进制(前端内嵌进可执行文件)
-task build              # = pnpm exec vite build && go build -tags production -o bin/BongoCat .
-./bin/BongoCat
-
-# 不用 task 的等价命令:
-pnpm exec vite build
-go build -tags production -ldflags "-w -s" -o bin/BongoCat .
+wails3 build -config ./build/config.yml
 ```
 
-打包成 `.app` / `.dmg` / Windows 安装包需要 `wails3 package`,步骤见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md)。
+打包成 `.app` / `.dmg` / Windows 安装包使用:
+
+```bash
+wails3 package -config ./build/config.yml
+```
 
 > **资源(Live2D 模型)**:开发态自动复用仓库内的 `src-tauri/assets/models`;生产态需把 `src-tauri/assets` 拷到二进制同目录,或设环境变量 `BONGOCAT_RESOURCES=<含 assets 的目录>`。
 
@@ -123,7 +130,8 @@ go build -tags production -ldflags "-w -s" -o bin/BongoCat .
 ├── main.go                 # 入口:两窗口、托盘、单实例、资源中间件
 ├── services/               # Go 后端服务
 │   ├── app.go              #   app/os/path/fs/dialog/clipboard/opener/...
-│   ├── device.go           #   全局键鼠监听(gohook)→ "device-changed" 事件
+│   ├── device.go           #   全局键鼠监听 → "device-changed" 事件
+│   ├── input_listener_*    #   macOS CGEventTap / 其他平台 fallback
 │   ├── window.go           #   显示/隐藏/置顶/穿透
 │   ├── store.go            #   设置持久化(JSON)
 │   └── keymap.go           #   gohook 键码 → rdev 名映射表
@@ -137,7 +145,7 @@ go build -tags production -ldflags "-w -s" -o bin/BongoCat .
 
 ## 🚧 已知缺口(M2 待办)
 
-手柄、自动更新、全局快捷键、macOS NSPanel/权限真检查、键码映射(CapsLock、左右修饰键区分)、Windows 激进置顶。完整清单见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md#已知缺口--mvp-限制后续里程碑)。
+手柄、自动更新、全局快捷键、macOS NSPanel/权限真检查、Windows 激进置顶。完整清单见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md#已知缺口--mvp-限制后续里程碑)。
 
 ## 🙏 致谢
 

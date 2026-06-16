@@ -124,6 +124,9 @@ func (s *AppService) Exists(path string) bool {
 func (s *AppService) ReadDir(path string) ([]FsEntry, error) {
 	items, err := os.ReadDir(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []FsEntry{}, nil
+		}
 		return nil, err
 	}
 	entries := make([]FsEntry, 0, len(items))

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=BongoCat
+Comment=A cute Live2D desktop pet that reacts to your keyboard, mouse and gamepad.
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/bongocat %u
+Terminal=false
+Type=Application
+Icon=bongocat
+Categories=Utility;
+StartupWMClass=bongocat
+
+ 

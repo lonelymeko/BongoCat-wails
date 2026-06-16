@@ -7,6 +7,12 @@ html {
     --uno: text-3.5 transition-opacity-300;
   }
 
+  &,
+  body,
+  #app {
+    background: transparent !important;
+  }
+
   &.dark {
     color-scheme: dark;
   }
@@ -18,4 +24,9 @@ html {
   button {
     outline: none !important;
   }
+}
+
+.bongo-drag-region,
+.bongo-drag-region * {
+  --wails-draggable: drag;
 }

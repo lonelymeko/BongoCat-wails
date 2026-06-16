@@ -1,12 +1,19 @@
 version: '3'
 
-# Minimal, CLI-independent task runner for the Wails v3 port of BongoCat.
-# (For the full `wails3 dev/build/package` flow with native packaging, see
-# MIGRATION-WAILS.md — it explains how to drop in the canonical build/ scaffold.)
-
 vars:
   APP_NAME: BongoCat
-  BIN: bin/{{.APP_NAME}}{{if eq OS "windows"}}.exe{{end}}
+  BIN_DIR: bin
+  BIN: '{{.BIN_DIR}}/{{.APP_NAME}}{{if eq OS "windows"}}.exe{{end}}'
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "pnpm"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 1420}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+  ios: ./build/ios/Taskfile.yml
+  android: ./build/android/Taskfile.yml
 
 tasks:
   install:
@@ -31,14 +38,39 @@ tasks:
     cmds:
       - pnpm exec vite build
 
-  build:
+  build:binary:
     desc: Build a production binary with the frontend embedded
     deps: [build:frontend]
     cmds:
       - go build -tags production -ldflags "-w -s" -o {{.BIN}} .
 
-  run:
+  run:binary:
     desc: Build then run the production binary
-    deps: [build]
+    deps: [build:binary]
     cmds:
       - '{{.BIN}}'
+
+  build:
+    summary: Builds the application through the Wails v3 task scaffold
+    cmds:
+      - task: '{{OS}}:build'
+
+  package:
+    summary: Packages a production build of the application
+    cmds:
+      - task: '{{OS}}:package'
+
+  run:
+    summary: Runs the Wails v3 task scaffold output
+    cmds:
+      - task: '{{OS}}:run'
+
+  wails:dev:
+    summary: Runs the application in development mode through Wails v3
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  setup:docker:
+    summary: Builds Docker image for cross-compilation
+    cmds:
+      - task: common:setup:docker

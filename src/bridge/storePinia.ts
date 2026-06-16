@@ -54,7 +54,7 @@ export function createPlugin(_options?: CreatePluginOptions): PiniaPlugin {
     const tauriOptions = (options as any).tauri as TauriStoreOptions | undefined
 
     // --- hydrate from persisted state ---------------------------------------
-    void (async () => {
+    const start = async () => {
       try {
         const json = await call<string>('StoreService', 'Load', store.$id)
         if (json) {
@@ -68,7 +68,13 @@ export function createPlugin(_options?: CreatePluginOptions): PiniaPlugin {
       } catch {
         // ignore load failures; store keeps its default state
       }
-    })()
+    }
+
+    ;(store as any).$tauri = {
+      start,
+    }
+
+    void start()
 
     // --- persist on change (debounced ~200ms) -------------------------------
     let timer: ReturnType<typeof setTimeout> | undefined

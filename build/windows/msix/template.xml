@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="bongocat"
+        Arguments=""
+        InstallLocation="C:\Program Files\ayangweb\BongoCat">
+    </Installer>
+    <PackageInformation
+        PackageName="BongoCat"
+        PackageDisplayName="BongoCat"
+        PublisherName="CN=ayangweb"
+        PublisherDisplayName="ayangweb"
+        Version="1.1.0.0"
+        PackageDescription="A cute Live2D desktop pet that reacts to your keyboard, mouse and gamepad.">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.ayangweb.BongoCat"
+                Description="A cute Live2D desktop pet that reacts to your keyboard, mouse and gamepad."
+                DisplayName="BongoCat"
+                ExecutableName="bongocat"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>BongoCat</DisplayName>
+            <PublisherDisplayName>ayangweb</PublisherDisplayName>
+            <Description>A cute Live2D desktop pet that reacts to your keyboard, mouse and gamepad.</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="bongocat.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

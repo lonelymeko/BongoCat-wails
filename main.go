@@ -118,6 +118,7 @@ func newMainWindow(app *application.App) *application.WebviewWindow {
 		},
 		Mac: application.MacWindow{
 			DisableShadow: true,
+			Backdrop:      application.MacBackdropTransparent,
 			WindowLevel:   application.MacWindowLevelFloating,
 			CollectionBehavior: application.MacWindowCollectionBehaviorCanJoinAllSpaces |
 				application.MacWindowCollectionBehaviorFullScreenAuxiliary,

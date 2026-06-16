@@ -16,6 +16,10 @@ export function getCurrentWebviewWindow() {
   return {
     label,
 
+    async setBackgroundColour(r: number, g: number, b: number, a: number): Promise<void> {
+      await Window.SetBackgroundColour(r, g, b, a)
+    },
+
     async isVisible(): Promise<boolean> {
       return call<boolean>('WindowService', 'IsVisible', label)
     },

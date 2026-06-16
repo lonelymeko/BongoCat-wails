@@ -2,6 +2,7 @@ package services
 
 import (
 	"sync"
+	"time"
 
 	hook "github.com/robotn/gohook"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -29,14 +30,20 @@ type cursorPoint struct {
 // DeviceService replaces start_device_listening. It hooks global keyboard and
 // mouse input via robotn/gohook and forwards each event to the frontend.
 type DeviceService struct {
-	app       *application.App
-	mu        sync.Mutex
-	listening bool
+	app           *application.App
+	mu            sync.Mutex
+	listening     bool
+	mouseUpCancel map[string]chan struct{}
+	mousePressed  map[string]bool
 }
 
 // NewDeviceService creates the service bound to the running application.
 func NewDeviceService(app *application.App) *DeviceService {
-	return &DeviceService{app: app}
+	return &DeviceService{
+		app:           app,
+		mouseUpCancel: make(map[string]chan struct{}),
+		mousePressed:  make(map[string]bool),
+	}
 }
 
 // StartListening begins global device listening. It is idempotent: calling it
@@ -50,6 +57,8 @@ func (s *DeviceService) StartListening() {
 	}
 	s.listening = true
 	s.mu.Unlock()
+
+	startPlatformInputListener(s)
 
 	go s.loop()
 }
@@ -68,6 +77,9 @@ func (s *DeviceService) loop() {
 
 		switch ev.Kind {
 		case hook.KeyDown:
+			if !handleHookKeyboardEvents() {
+				continue
+			}
 			name := keyName(ev.Keycode)
 			if name == "" {
 				continue
@@ -75,6 +87,9 @@ func (s *DeviceService) loop() {
 			de = deviceEvent{Kind: "KeyboardPress", Value: name}
 
 		case hook.KeyUp:
+			if !handleHookKeyboardEvents() {
+				continue
+			}
 			name := keyName(ev.Keycode)
 			if name == "" {
 				continue
@@ -82,12 +97,25 @@ func (s *DeviceService) loop() {
 			de = deviceEvent{Kind: "KeyboardRelease", Value: name}
 
 		case hook.MouseDown:
-			de = deviceEvent{Kind: "MousePress", Value: mouseButtonName(ev.Button)}
+			if !handleHookMouseEvents() {
+				continue
+			}
+			name := mouseButtonName(ev.Button)
+			s.emitMousePress(name)
+			continue
 
 		case hook.MouseUp:
-			de = deviceEvent{Kind: "MouseRelease", Value: mouseButtonName(ev.Button)}
+			if !handleHookMouseEvents() {
+				continue
+			}
+			name := mouseButtonName(ev.Button)
+			s.emitMouseRelease(name)
+			continue
 
 		case hook.MouseMove, hook.MouseDrag:
+			if !handleHookMouseEvents() {
+				continue
+			}
 			de = deviceEvent{Kind: "MouseMove", Value: cursorPoint{X: ev.X, Y: ev.Y}}
 
 		default:
@@ -98,4 +126,116 @@ func (s *DeviceService) loop() {
 
 		s.app.Event.Emit(DeviceEventName, de)
 	}
+}
+
+func (s *DeviceService) handleMouseMove(x, y int16) {
+	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "MouseMove", Value: cursorPoint{X: x, Y: y}})
+}
+
+func (s *DeviceService) emitKeyboardPress(name string) {
+	if name == "" {
+		return
+	}
+
+	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "KeyboardPress", Value: name})
+}
+
+func (s *DeviceService) emitKeyboardRelease(name string) {
+	if name == "" {
+		return
+	}
+
+	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "KeyboardRelease", Value: name})
+}
+
+func (s *DeviceService) emitMousePress(name string) bool {
+	if !s.markMousePressed(name) {
+		return false
+	}
+
+	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "MousePress", Value: name})
+	s.watchMouseRelease(name)
+	return true
+}
+
+func (s *DeviceService) emitMouseRelease(name string) bool {
+	if !s.markMouseReleased(name) {
+		return false
+	}
+
+	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "MouseRelease", Value: name})
+	s.cancelMouseReleaseWatch(name)
+	return true
+}
+
+func (s *DeviceService) watchMouseRelease(name string) {
+	_, ok := mouseButtonDown(name)
+	if !ok {
+		return
+	}
+
+	s.cancelMouseReleaseWatch(name)
+
+	stop := make(chan struct{})
+
+	s.mu.Lock()
+	s.mouseUpCancel[name] = stop
+	s.mu.Unlock()
+
+	go func() {
+		ticker := time.NewTicker(8 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				down, ok := mouseButtonDown(name)
+				if !ok || down {
+					continue
+				}
+
+				s.emitMouseRelease(name)
+				return
+			}
+		}
+	}()
+}
+
+func (s *DeviceService) cancelMouseReleaseWatch(name string) {
+	s.mu.Lock()
+	stop, ok := s.mouseUpCancel[name]
+	if ok {
+		delete(s.mouseUpCancel, name)
+	}
+	s.mu.Unlock()
+
+	if ok {
+		close(stop)
+	}
+}
+
+func (s *DeviceService) markMousePressed(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.mousePressed[name] {
+		return false
+	}
+
+	s.mousePressed[name] = true
+	return true
+}
+
+func (s *DeviceService) markMouseReleased(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.mousePressed[name] {
+		return false
+	}
+
+	delete(s.mousePressed, name)
+	return true
 }

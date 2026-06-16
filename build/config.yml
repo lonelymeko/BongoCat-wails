@@ -26,18 +26,19 @@ dev_mode:
       - node_modules
       - dist
       - bin
-      - src
+      - src-tauri
     file:
       - .DS_Store
       - .gitignore
       - '*_test.go'
     watched_extension:
       - '*.go'
+      - '*.ts'
     git_ignore: true
   executes:
     - cmd: wails3 build DEV=true
       type: blocking
-    - cmd: pnpm dev
+    - cmd: wails3 task common:dev:frontend
       type: background
     - cmd: wails3 task run
       type: primary

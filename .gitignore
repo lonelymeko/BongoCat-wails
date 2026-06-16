@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 target
+.task
+.cache
 
 # Editor directories and files
 .idea
