@@ -1,151 +1,150 @@
-![BongoCat](https://socialify.git.ci/ayangweb/BongoCat/image?custom_description=&description=1&font=Source+Code+Pro&forks=1&issues=1&logo=https%3A%2F%2Fgithub.com%2Fayangweb%2FBongoCat%2Fblob%2Fmaster%2Fsrc-tauri%2Fassets%2Flogo-mac.png%3Fraw%3Dtrue&name=1&owner=1&pattern=Floating+Cogs&pulls=1&stargazers=1&theme=Auto)
-
 <div align="center">
-  <div>
-    <a href="https://github.com/ayangweb/BongoCat/releases"><img alt="Windows" src="https://img.shields.io/badge/-Windows-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB0PSIxNzI2MzA1OTcxMDA2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE1NDgiIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4Ij48cGF0aCBkPSJNNTI3LjI3NTU1MTYxIDk2Ljk3MTAzMDEzdjM3My45OTIxMDY2N2g0OTQuNTEzNjE5NzVWMTUuMDI2NzU3NTN6TTUyNy4yNzU1NTE2MSA5MjguMzIzNTA4MTVsNDk0LjUxMzYxOTc1IDgwLjUyMDI4MDQ5di00NTUuNjc3NDcxNjFoLTQ5NC41MTM2MTk3NXpNNC42NzA0NTEzNiA0NzAuODMzNjgyOTdINDIyLjY3Njg1OTI1VjExMC41NjM2ODE5N2wtNDE4LjAwNjQwNzg5IDY5LjI1Nzc5NzUzek00LjY3MDQ1MTM2IDg0Ni43Njc1OTcwM0w0MjIuNjc2ODU5MjUgOTE0Ljg2MDMxMDEzVjU1My4xNjYzMTcwM0g0LjY3MDQ1MTM2eiIgcC1pZD0iMTU0OSIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==" /></a>
-    <a href="https://github.com/ayangweb/BongoCat/releases"><img alt="MacOS" src="https://img.shields.io/badge/-MacOS-black?style=flat-square&logo=apple&logoColor=white" /></a>
-    <a href="https://github.com/ayangweb/BongoCat/releases"><img alt="Linux" src="https://img.shields.io/badge/-Linux-yellow?style=flat-square&logo=linux&logoColor=white" /></a>
-  </div>
 
-  <p>
-    <a href="./LICENSE"><img src="https://img.shields.io/github/license/ayangweb/BongoCat?style=flat-square" /></a>
-    <a href="https://github.com/ayangweb/BongoCat/releases/latest"><img src="https://img.shields.io/github/package-json/v/ayangweb/BongoCat?style=flat-square"/></a>
-    <a href="https://github.com/ayangweb/BongoCat/releases"><img src="https://img.shields.io/github/downloads/ayangweb/BongoCat/total?style=flat-square"/></a>
-  </p>
+# BongoCat · Wails v3 版
 
-  <p>
-    <a href="https://trendshift.io/developers/8507" target="_blank"><img src="https://trendshift.io/api/badge/developers/8507" alt="ayangweb | Trendshift" width="250" height="55" /></a>
-    <a href="https://trendshift.io/repositories/14605" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14605" alt="ayangweb%2FBongoCat | Trendshift" width="250" height="55" /></a>
-    <a href="https://hellogithub.com/repository/7d23863fd4be47b39e816193ded385c9" target="_blank">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7d23863fd4be47b39e816193ded385c9&claim_uid=5ihRVIuTYBmSGtQ&theme=dark" />
-        <source media="(prefers-color-scheme: light)" srcset="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7d23863fd4be47b39e816193ded385c9&claim_uid=5ihRVIuTYBmSGtQ&theme=neutral" />
-        <img alt="Star History Chart" src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=7d23863fd4be47b39e816193ded385c9&claim_uid=5ihRVIuTYBmSGtQ&theme=neutral" width="250" height="55" />
-      </picture>
-    </a>
-  </p>
+一只透明、置顶、会跟着你打字和挪鼠标动起来的 Live2D 桌宠。
+
+**本仓库是 [ayangweb/BongoCat](https://github.com/ayangweb/BongoCat) 的 Wails v3 (Go) 改造版** —— 后端从 Tauri / Rust 迁移到 Wails v3 / Go,前端 Vue 几乎原样保留。
+
+<p>
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" />
+  <img alt="Wails" src="https://img.shields.io/badge/Wails-v3--alpha-DF0000?style=flat-square" />
+  <img alt="Vue" src="https://img.shields.io/badge/Vue-3-42b883?style=flat-square&logo=vuedotjs&logoColor=white" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white" />
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green?style=flat-square" /></a>
+</p>
+
 </div>
 
-| macOS                                                                                        | Windows                                                                                        | Linux(x11)                                                                                   |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| ![macOS](https://i0.hdslb.com/bfs/openplatform/dff276b96d49c5d6c431b74b531aab72191b3d87.png) | ![Windows](https://i0.hdslb.com/bfs/openplatform/a4149b753856ee7f401989da902cf3b5ad35b39e.png) | ![Linux](https://i0.hdslb.com/bfs/openplatform/3b49f961819d3ff63b2b80251c1cc13c27e986b0.png) |
+> ⚠️ **状态:M1 / MVP**。核心(透明猫窗 + 键鼠监听 + Live2D + 偏好持久化 + 托盘)已成型;手柄、自动更新、全局快捷键等仍是 stub。完整的迁移说明、架构细节与待办见 **[MIGRATION-WAILS.md](./MIGRATION-WAILS.md)**。
+>
+> 目标平台 **macOS / Windows**。代码在 headless Linux 上完成,**Go 的 cgo/GUI 部分需在 macOS/Windows 真机首次编译**。
 
-## 赞助商
+---
 
-<a href="https://www.toolsetlink.com">
-  <img height="54" alt="UpgradeLink" src="https://github.com/user-attachments/assets/6b84fb0f-3f1d-44b5-9932-2298bc999d8d" />
-</a>
+## ✨ 功能
 
-## 开发背景
+- 透明、无边框、置顶、可穿透的桌宠窗口
+- 跟随键盘 / 鼠标(手柄待补)实时联动 Live2D 动作
+- 支持导入自定义模型
+- 偏好设置本地持久化,离线运行,不收集数据
 
-本项目的灵感来源于 [MMmmmoko](https://github.com/MMmmmoko) 大佬开发的 [Bongo-Cat-Mver](https://github.com/MMmmmoko/Bongo-Cat-Mver)。它以独特的猫咪互动功能深受用户喜爱，但仅支持 Windows 平台。作为一名深度 macOS 用户，我特别希望在自己的设备上也能使用这款可爱的猫咪，于是我决定开发一个适配 macOS 的版本。
+## 🧩 技术栈
 
-同时，得益于 [Tauri](https://github.com/tauri-apps/tauri) 强大的跨平台能力，本项目不仅支持 macOS，还兼容 Windows 和 Linux(x11)，让更多的用户都能与这只可爱的猫咪互动！
+| 层       | 用的东西                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 前端     | Vue 3 · Vite 6 · Pinia · Live2D(pixi.js + easy-live2d)                                                                                      |
+| 后端     | Go · [Wails v3](https://v3.wails.io)(alpha)                                                                                                 |
+| 桥接     | `src/bridge/*` 把 `@tauri-apps/*` 导入经 Vite alias 重定向到 [`@wailsio/runtime`](https://www.npmjs.com/package/@wailsio/runtime) + Go 服务 |
+| 原生能力 | 全局键鼠:[`robotn/gohook`](https://github.com/robotn/gohook) · 窗口/托盘/单实例:Wails                                                       |
 
-## 下载
+简版架构:
 
-- [夸克网盘](https://pan.quark.cn/s/70f2f2663ce1)
-- [GitHub Releases](https://github.com/ayangweb/BongoCat/releases)
+```
+Vue 组件  ──import '@tauri-apps/*'──►  vite alias  ──►  src/bridge/*.ts
+                                                              │
+                                  @wailsio/runtime (Events/Call/Window)
+                                                              │
+                                                        Go services
+                              AppService · DeviceService · WindowService · StoreService
+                                                              │
+                                                      main.go(两窗口 + 托盘)
+```
 
-不确定下载哪一个？请查阅[下载指南](.github/DOWNLOAD_GUIDE.md)。
+> 详见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md)。
 
-## 功能介绍
+## 📦 环境要求
 
-- 适配 macOS、Windows 和 Linux(x11)。
-- 根据键盘、鼠标或手柄的操作，同步对应的动作。
-- 支持导入自定义模型，自由打造专属猫咪形象。
-- 完全开源，代码公开透明，绝不收集任何用户数据。
-- 支持离线运行，无需联网，保护用户隐私。
+- **Go ≥ 1.24**
+- **Node ≥ 20** + **pnpm**(`corepack enable` 即可)
+- 平台原生工具链(因为用到 cgo —— 系统 webview + 全局键鼠 hook):
+  - **macOS**:Xcode Command Line Tools(`xcode-select --install`)
+  - **Windows**:一个 C 编译器(MSYS2/MinGW 的 `gcc`)—— gohook 的全局 hook 需要
+  - **Linux(x11)**:`webkit2gtk` / `gtk` 开发包 + `libX11/libXtst/libxcb*` 开发头
+- 可选:[`wails3` CLI](https://v3.wails.io)(仅打包 dmg/installer 时需要)
+  `go install github.com/wailsapp/wails/v3/cmd/wails3@latest`
 
-## 模型转换
+## 🚀 快速开始
 
-如果你想将 Bongo-Cat-Mver 应用中的模型转换为兼容 BongoCat 的格式，可以使用以下工具：
+```bash
+git clone https://github.com/lonelymeko/BongoCat-wails.git
+cd BongoCat-wails
 
-🔗 [在线转换](https://bongocat.vteamer.cc)
+pnpm install            # 装前端依赖
+pnpm exec vite build    # ❗首次必须先构建一次前端:main.go 的 //go:embed 需要 dist/ 存在
+```
 
-## 更多模型
+## 🛠 开发
 
-你可以在这个仓库中探索、下载更多猫咪模型，或提交你的创作，与大家一起分享：
+> macOS 首次运行前,请到 **系统设置 → 隐私与安全性 → 输入监控** 给 BongoCat 授权,否则收不到键鼠事件,猫不动。
 
-📦 [Awesome-BongoCat](https://github.com/ayangweb/Awesome-BongoCat)
+### 方式 A:不依赖 wails3 CLI(推荐先用这个跑通)
 
-## 社区交流
+开两个终端:
 
-<table>
-  <thead>
-    <tr>
-      <th>QQ 群 1</th>
-      <th>QQ 群 2</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>
-        <a href="https://qm.qq.com/q/AS3gNv2Vzy">
-          <picture>
-            <source
-              media="(prefers-color-scheme: dark)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/8ecdc4982ab01b59d7731fcca3ec26631a274560.png"
-            />
-            <source
-              media="(prefers-color-scheme: light)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/09f56580397063e1819c4c2ed63d07dee12720e1.png"
-            />
-            <img
-              alt="QQ Group 1"
-              src="https://i0.hdslb.com/bfs/openplatform/09f56580397063e1819c4c2ed63d07dee12720e1.png"
-              height="250"
-            />
-          </picture>
-        </a>
-      </td>
-      <td>
-        <a href="https://qm.qq.com/q/TmltLAod2O">
-          <picture>
-            <source
-              media="(prefers-color-scheme: dark)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/473c522487ff33e0f32b15466aeb0734f17161c8.png"
-            />
-            <source
-              media="(prefers-color-scheme: light)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/d5ae8c5af6ae1d0a1f066705ee822d1287384cf6.png"
-            />
-            <img
-              alt="QQ Group 2"
-              src="https://i0.hdslb.com/bfs/openplatform/d5ae8c5af6ae1d0a1f066705ee822d1287384cf6.png"
-              height="250"
-            />
-          </picture>
-        </a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+```bash
+# 终端 1:Vite dev server(热更新,:1420)
+pnpm dev                # 或 task dev:frontend
 
-## 赞赏
+# 终端 2:Go/Wails app 连上 dev server
+FRONTEND_DEVSERVER_URL=http://localhost:1420 go run .   # 或 task dev:app
+```
 
-每一份认可都值得被珍视！赞赏随缘，心意无价，谢谢你的支持 ❤️
+app 在开发构建下读取 `FRONTEND_DEVSERVER_URL` 直接用 Vite;未设置时回退到内嵌的 `dist`。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://i0.hdslb.com/bfs/openplatform/e7438bff14cdfb6bfd0feacbb482f99ea4093294.png" />
-  <source media="(prefers-color-scheme: light)" srcset="https://i0.hdslb.com/bfs/openplatform/da55cc3ec1556580c91e59f589792866c998c7c6.png" />
-  <img alt="微信赞赏码" src="https://i0.hdslb.com/bfs/openplatform/da55cc3ec1556580c91e59f589792866c998c7c6.png" height="250" />
-</picture>
+### 方式 B:wails3 CLI(热重载更完整)
 
-## 贡献指南
+需要先补齐平台脚手架,见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md) 的「完整打包」一节,然后:
 
-感谢大家为 BongoCat 做出的宝贵贡献！如果你也希望为 BongoCat 做出贡献，请查阅[贡献指南](.github/CONTRIBUTING.md)。
+```bash
+wails3 dev
+```
 
-<a href="https://openomy.com/ayangweb/BongoCat" target="_blank" style="display: block; width: 100%;" align="center">
-  <img src="https://openomy.com/svg?repo=ayangweb/BongoCat&chart=bubble" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
-</a>
+## 🏗 构建
 
-## 历史星标
+```bash
+# 生产二进制(前端内嵌进可执行文件)
+task build              # = pnpm exec vite build && go build -tags production -o bin/BongoCat .
+./bin/BongoCat
 
-<a href="https://www.star-history.com/#ayangweb/BongoCat&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date" />
- </picture>
-</a>
+# 不用 task 的等价命令:
+pnpm exec vite build
+go build -tags production -ldflags "-w -s" -o bin/BongoCat .
+```
+
+打包成 `.app` / `.dmg` / Windows 安装包需要 `wails3 package`,步骤见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md)。
+
+> **资源(Live2D 模型)**:开发态自动复用仓库内的 `src-tauri/assets/models`;生产态需把 `src-tauri/assets` 拷到二进制同目录,或设环境变量 `BONGOCAT_RESOURCES=<含 assets 的目录>`。
+
+## 📂 项目结构
+
+```
+.
+├── main.go                 # 入口:两窗口、托盘、单实例、资源中间件
+├── services/               # Go 后端服务
+│   ├── app.go              #   app/os/path/fs/dialog/clipboard/opener/...
+│   ├── device.go           #   全局键鼠监听(gohook)→ "device-changed" 事件
+│   ├── window.go           #   显示/隐藏/置顶/穿透
+│   ├── store.go            #   设置持久化(JSON)
+│   └── keymap.go           #   gohook 键码 → rdev 名映射表
+├── src/                    # Vue 前端(沿用原版)
+│   └── bridge/             # Tauri 兼容层(23 个 shim)
+├── vite.config.ts          # resolve.alias:@tauri-apps/* → src/bridge/*
+├── Taskfile.yml            # task install / dev:* / build
+├── build/config.yml        # wails3 CLI 构建配置
+└── MIGRATION-WAILS.md      # 迁移详解 + 已知缺口 + 验证清单
+```
+
+## 🚧 已知缺口(M2 待办)
+
+手柄、自动更新、全局快捷键、macOS NSPanel/权限真检查、键码映射(CapsLock、左右修饰键区分)、Windows 激进置顶。完整清单见 [MIGRATION-WAILS.md](./MIGRATION-WAILS.md#已知缺口--mvp-限制后续里程碑)。
+
+## 🙏 致谢
+
+- 原项目 [ayangweb/BongoCat](https://github.com/ayangweb/BongoCat) —— 本仓库是其 Wails 改造 fork。
+- 灵感来源 [MMmmmoko/Bongo-Cat-Mver](https://github.com/MMmmmoko/Bongo-Cat-Mver)。
+- 更多模型:[Awesome-BongoCat](https://github.com/ayangweb/Awesome-BongoCat)。
+
+## 📄 License
+
+[MIT](./LICENSE) —— 沿用原项目协议。
