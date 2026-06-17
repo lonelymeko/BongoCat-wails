@@ -14,6 +14,18 @@ extern void bongoKeyPress(int keycode);
 extern void bongoKeyRelease(int keycode);
 extern void bongoFlagsChanged(int keycode, unsigned long flags);
 
+static bool bongo_emit_current_mouse_location(void) {
+	CGEventRef event = CGEventCreate(NULL);
+	if (event == NULL) {
+		return false;
+	}
+
+	CGPoint point = CGEventGetLocation(event);
+	CFRelease(event);
+	bongoMouseMove(point.x, point.y);
+	return true;
+}
+
 static CGEventRef bongo_input_tap_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
 	CGPoint point = CGEventGetLocation(event);
 
@@ -116,6 +128,8 @@ var darwinModifierState = map[string]bool{}
 func startPlatformInputListener(s *DeviceService) {
 	darwinInputService = s
 
+	C.bongo_emit_current_mouse_location()
+
 	go C.bongo_start_input_tap()
 }
 
@@ -153,7 +167,7 @@ func bongoMouseMove(x, y C.double) {
 		return
 	}
 
-	darwinInputService.handleMouseMove(int16(x), int16(y))
+	darwinInputService.handleMouseMove(float64(x), float64(y))
 }
 
 //export bongoKeyPress

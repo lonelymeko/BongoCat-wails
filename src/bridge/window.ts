@@ -43,9 +43,9 @@ export async function availableMonitors(): Promise<Monitor[]> {
   return screens.map(toMonitor)
 }
 
-// x,y are LOGICAL coords (caller passes cursor.toLogical). Screen bounds are
-// physical; this is a best-effort hit-test against each screen's Bounds. We
-// fall back to the primary screen when no bounds contain the point.
+// x,y are Wails screen coordinates. On macOS our native CGEventTap reports
+// global points in the same coordinate space, so do not apply an extra DPR
+// conversion before calling this.
 export async function monitorFromPoint(x: number, y: number): Promise<Monitor | null> {
   const screens = await Screens.GetAll()
 

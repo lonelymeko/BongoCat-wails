@@ -93,7 +93,7 @@ watch([() => catStore.window.scale, modelSize], async ([scale, modelSize]) => {
 
   const { width, height } = modelSize
 
-  appWindow.setSize(
+  await appWindow.setSize(
     new PhysicalSize({
       width: Math.round(width * (scale / 100)),
       height: Math.round(height * (scale / 100)),

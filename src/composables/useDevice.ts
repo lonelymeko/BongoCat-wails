@@ -157,8 +157,8 @@ export function useDevice() {
   })()
 
   const handleCursorMove = async (cursorPoint: CursorPoint) => {
-    const x = cursorPoint.x * scaleFactor.value
-    const y = cursorPoint.y * scaleFactor.value
+    const x = isMac ? cursorPoint.x : cursorPoint.x * scaleFactor.value
+    const y = isMac ? cursorPoint.y : cursorPoint.y * scaleFactor.value
 
     handleMouseMove(new PhysicalPosition(x, y))
 

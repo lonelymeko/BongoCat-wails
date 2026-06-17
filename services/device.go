@@ -23,8 +23,8 @@ type deviceEvent struct {
 }
 
 type cursorPoint struct {
-	X int16 `json:"x"`
-	Y int16 `json:"y"`
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 // DeviceService replaces start_device_listening. It hooks global keyboard and
@@ -116,7 +116,7 @@ func (s *DeviceService) loop() {
 			if !handleHookMouseEvents() {
 				continue
 			}
-			de = deviceEvent{Kind: "MouseMove", Value: cursorPoint{X: ev.X, Y: ev.Y}}
+			de = deviceEvent{Kind: "MouseMove", Value: cursorPoint{X: float64(ev.X), Y: float64(ev.Y)}}
 
 		default:
 			// KeyHold / wheel / fake events are ignored — the frontend models
@@ -128,7 +128,7 @@ func (s *DeviceService) loop() {
 	}
 }
 
-func (s *DeviceService) handleMouseMove(x, y int16) {
+func (s *DeviceService) handleMouseMove(x, y float64) {
 	s.app.Event.Emit(DeviceEventName, deviceEvent{Kind: "MouseMove", Value: cursorPoint{X: x, Y: y}})
 }
 
