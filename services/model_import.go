@@ -290,9 +290,11 @@ func emitLive2DModel(config mverConfig, sourceDir, dst string) error {
 	}
 
 	layout := bongoLayout{
-		Scale:      orDefault(config.Decoration.L2DCorrect, 1),
-		Mirror:     config.Decoration.L2DHorizontalFlip,
-		BehindBase: true,
+		Scale:  orDefault(config.Decoration.L2DCorrect, 1),
+		Mirror: config.Decoration.L2DHorizontalFlip,
+		// Keep the background (the tablet/desk, which includes the keyboard) at
+		// the BOTTOM so the character's Live2D hands render on top of the keys.
+		BehindBase: false,
 	}
 	data, err := json.MarshalIndent(layout, "", "  ")
 	if err != nil {
