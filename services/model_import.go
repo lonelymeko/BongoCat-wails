@@ -3,6 +3,9 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/draw"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -232,33 +235,20 @@ func emitMverMode(config mverConfig, spec modeSpec, sourceDir, dst string) error
 	if err := os.RemoveAll(dst); err != nil {
 		return err
 	}
-
-	if hasFile(filepath.Join(sourceDir, "cat_model"), "cat.model3.json") {
-		return emitLive2DModel(config, sourceDir, dst)
-	}
-
-	// Pure 2D sprite mode: preserve images verbatim and drive them via mver.json.
-	if err := copyDir(sourceDir, dst); err != nil {
-		return err
-	}
-	manifest := buildManifest(config, spec, dst)
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(dst, "mver.json"), data, 0o644)
+	return emitBongoCatModel(spec, sourceDir, dst)
 }
 
-type bongoLayout struct {
-	Scale      float64 `json:"scale,omitempty"`
-	Mirror     bool    `json:"mirror,omitempty"`
-	BehindBase bool    `json:"behindBase,omitempty"`
-}
-
-// emitLive2DModel writes a BongoCat-compatible model: the Cubism model files at
-// the root, plus resources/{background,cover,layout}. No keycaps, so no wrong
-// overlays — just the character + the desk/device background.
-func emitLive2DModel(config mverConfig, sourceDir, dst string) error {
+// emitBongoCatModel replicates the official ayangweb/BongoCat-Converter exactly:
+//   - the Cubism model (cat_model/*) is copied to the model root,
+//   - the background (mousebg for standard, bg otherwise) -> resources/background.png,
+//   - cat.png -> resources/cover.png,
+//   - each keyboard[i]+hand[i] sprite pair is composited into
+//     resources/{left,right}-keys/<keyName>.png (BongoCat's keycap system).
+//
+// It writes NO layout.json: the model renders at BongoCat's defaults, just like
+// a model produced by the official converter. (Applying l2d_correct / flip here
+// only mis-scaled and mirrored the character.)
+func emitBongoCatModel(spec modeSpec, sourceDir, dst string) error {
 	// Cubism model (cat.model3.json + moc3 + textures + physics/pose) at root.
 	if err := copyDir(filepath.Join(sourceDir, "cat_model"), dst); err != nil {
 		return err
@@ -269,38 +259,81 @@ func emitLive2DModel(config mverConfig, sourceDir, dst string) error {
 		return err
 	}
 
-	// Background (the desk / tablet / controller the character sits at).
-	bg := firstExistingAbs(sourceDir,
-		"l2dmousebg.png", "l2dtabletbg.png", "mousebg.png", "tabletbg.png", "bg.png")
-	if bg != "" {
+	// Background: mousebg.png for standard, bg.png for keyboard/gamepad.
+	bgName := "bg.png"
+	if spec.mode == "standard" {
+		bgName = "mousebg.png"
+	}
+	if bg := firstExistingAbs(sourceDir, bgName, "l2dmousebg.png", "mousebg.png", "bg.png"); bg != "" {
 		if err := copyFile(bg, filepath.Join(resources, "background.png")); err != nil {
 			return err
 		}
 	}
 
-	// Card cover: prefer the model's cat.png preview, else the background.
-	cover := filepath.Join(sourceDir, "cat.png")
-	if !hasPath(cover) {
-		cover = bg
-	}
-	if cover != "" {
+	// Card cover thumbnail.
+	if cover := filepath.Join(sourceDir, "cat.png"); hasPath(cover) {
 		if err := copyFile(cover, filepath.Join(resources, "cover.png")); err != nil {
 			return err
 		}
 	}
 
-	layout := bongoLayout{
-		Scale:  orDefault(config.Decoration.L2DCorrect, 1),
-		Mirror: config.Decoration.L2DHorizontalFlip,
-		// Keep the background (the tablet/desk, which includes the keyboard) at
-		// the BOTTOM so the character's Live2D hands render on top of the keys.
-		BehindBase: false,
+	// Keycaps. Standard has only a left hand; keyboard/gamepad have both, and the
+	// right hand's keyboard sprites continue after the left hand's (the official
+	// converter's `lefthand.length + index`).
+	keyboard := spec.categories["keyboard"]
+	gamepad := spec.mode == "gamepad"
+
+	if spec.mode == "standard" {
+		return writeKeycaps(sourceDir, filepath.Join(resources, "left-keys"),
+			"hand", keyboard, spec.categories["hand"], 0, gamepad)
 	}
-	data, err := json.MarshalIndent(layout, "", "  ")
-	if err != nil {
+
+	left := spec.categories["lefthand"]
+	if err := writeKeycaps(sourceDir, filepath.Join(resources, "left-keys"),
+		"lefthand", keyboard, left, 0, gamepad); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(resources, "layout.json"), data, 0o644)
+	return writeKeycaps(sourceDir, filepath.Join(resources, "right-keys"),
+		"righthand", keyboard, spec.categories["righthand"], len(left), gamepad)
+}
+
+// writeKeycaps composites each hand sprite with its paired keyboard sprite (when
+// present) and writes resources/<keysDir>/<keyName>.png, keyed by the combo's
+// first key code (deviceKeyMap / gamepadKeyMap, matching the official converter).
+func writeKeycaps(sourceDir, outDir, handDir string, keyboard, hand [][]int, keyboardOffset int, gamepad bool) error {
+	if len(hand) == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return err
+	}
+
+	for index, combo := range hand {
+		if len(combo) == 0 {
+			continue
+		}
+		name := keycapName(combo[0], gamepad)
+		if name == "" {
+			continue
+		}
+
+		handImg := filepath.Join(sourceDir, handDir, strconv.Itoa(index)+".png")
+		if !hasPath(handImg) {
+			continue
+		}
+
+		out := filepath.Join(outDir, name+".png")
+		kbImg := filepath.Join(sourceDir, "keyboard", strconv.Itoa(keyboardOffset+index)+".png")
+
+		if len(keyboard) > 0 && hasPath(kbImg) {
+			if err := compositePNG(out, kbImg, handImg); err != nil {
+				return err
+			}
+		} else if err := copyFile(handImg, out); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func firstExistingAbs(dir string, names ...string) string {
@@ -311,6 +344,103 @@ func firstExistingAbs(dir string, names ...string) string {
 		}
 	}
 	return ""
+}
+
+// keycapName maps a config key code to a BongoCat keycap file name, matching
+// ayangweb/BongoCat-Converter's deviceKeyMap / gamepadKeyMap. The frontend's
+// getSupportedKey() collapses side-specific device names (e.g. "ShiftLeft" ->
+// "Shift") so these match the DeviceService events.
+func keycapName(code int, gamepad bool) string {
+	if gamepad {
+		return gamepadKeyMap[code]
+	}
+	return deviceKeyMap[code]
+}
+
+// compositePNG stacks layers (bottom-first) onto a canvas sized to the smallest
+// layer and writes the result, matching the converter's mergeImages(min w/h).
+func compositePNG(dst string, layers ...string) error {
+	var canvas *image.RGBA
+	minW, minH := -1, -1
+
+	imgs := make([]image.Image, 0, len(layers))
+	for _, layer := range layers {
+		img, err := decodePNG(layer)
+		if err != nil {
+			return err
+		}
+		imgs = append(imgs, img)
+
+		b := img.Bounds()
+		if minW < 0 || b.Dx() < minW {
+			minW = b.Dx()
+		}
+		if minH < 0 || b.Dy() < minH {
+			minH = b.Dy()
+		}
+	}
+
+	if minW <= 0 || minH <= 0 {
+		return fmt.Errorf("no layers to composite for %s", dst)
+	}
+
+	canvas = image.NewRGBA(image.Rect(0, 0, minW, minH))
+	for _, img := range imgs {
+		draw.Draw(canvas, canvas.Bounds(), img, img.Bounds().Min, draw.Over)
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return png.Encode(out, canvas)
+}
+
+func decodePNG(path string) (image.Image, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	return png.Decode(file)
+}
+
+// deviceKeyMap mirrors ayangweb/BongoCat-Converter's deviceKeyMap.
+var deviceKeyMap = map[int]string{
+	8: "BackSpace", 9: "Tab", 13: "Return", 16: "Shift", 17: "Control",
+	18: "Alt", 19: "Pause", 20: "CapsLock", 27: "Escape", 32: "Space",
+	33: "PageUp", 34: "PageDown", 35: "End", 36: "Home", 37: "LeftArrow",
+	38: "UpArrow", 39: "RightArrow", 40: "DownArrow", 44: "PrintScreen",
+	45: "Insert", 46: "Delete",
+	48: "Num0", 49: "Num1", 50: "Num2", 51: "Num3", 52: "Num4", 53: "Num5",
+	54: "Num6", 55: "Num7", 56: "Num8", 57: "Num9",
+	65: "KeyA", 66: "KeyB", 67: "KeyC", 68: "KeyD", 69: "KeyE", 70: "KeyF",
+	71: "KeyG", 72: "KeyH", 73: "KeyI", 74: "KeyJ", 75: "KeyK", 76: "KeyL",
+	77: "KeyM", 78: "KeyN", 79: "KeyO", 80: "KeyP", 81: "KeyQ", 82: "KeyR",
+	83: "KeyS", 84: "KeyT", 85: "KeyU", 86: "KeyV", 87: "KeyW", 88: "KeyX",
+	89: "KeyY", 90: "KeyZ",
+	91: "MetaLeft", 92: "MetaRight", 93: "Apps",
+	96: "Kp0", 97: "Kp1", 98: "Kp2", 99: "Kp3", 100: "Kp4", 101: "Kp5",
+	102: "Kp6", 103: "Kp7", 104: "Kp8", 105: "Kp9",
+	106: "KpMultiply", 107: "KpPlus", 109: "KpMinus", 110: "KpDecimal",
+	111: "KpDivide",
+	112: "F1", 113: "F2", 114: "F3", 115: "F4", 116: "F5", 117: "F6",
+	118: "F7", 119: "F8", 120: "F9", 121: "F10", 122: "F11", 123: "F12",
+	144: "NumLock", 145: "ScrollLock", 186: "SemiColon", 187: "Equal",
+	188: "Comma", 189: "Minus", 190: "Dot", 191: "Slash", 192: "BackQuote",
+	219: "LeftBracket", 220: "Backslash", 221: "RightBracket", 222: "Quote",
+}
+
+// gamepadKeyMap mirrors ayangweb/BongoCat-Converter's gamepadKeyMap.
+var gamepadKeyMap = map[int]string{
+	0: "South", 1: "East", 2: "West", 3: "North",
+	4: "LeftTrigger", 5: "RightTrigger", 6: "LeftTrigger2", 7: "RightTrigger2",
+	8: "LeftThumb", 9: "RightThumb",
+	10: "DPadLeft", 11: "DPadRight", 12: "DPadUp", 13: "DPadDown",
+	14: "Start", 15: "Select",
 }
 
 func buildManifest(config mverConfig, spec modeSpec, dst string) mverManifest {
