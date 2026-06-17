@@ -3,7 +3,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { open } from '@tauri-apps/plugin-dialog'
-import { readDir } from '@tauri-apps/plugin-fs'
 import { message } from 'antdv-next'
 import { nanoid } from 'nanoid'
 import { onMounted, ref, useTemplateRef, watch } from 'vue'
@@ -14,6 +13,11 @@ import type { ModelMode } from '@/stores/model'
 import { INVOKE_KEY } from '@/constants'
 import { useModelStore } from '@/stores/model'
 import { join } from '@/utils/path'
+
+interface ImportedModel {
+  path: string
+  mode: ModelMode
+}
 
 const dropRef = useTemplateRef('drop')
 const dragenter = ref(false)
@@ -61,32 +65,20 @@ watch(selectPaths, async (paths) => {
     try {
       const id = nanoid()
 
-      let mode: ModelMode = 'standard'
-
-      const files = await readDir(join(fromPath, 'resources', 'right-keys')).catch(() => [])
-
-      if (files.length > 0) {
-        const fileNames = files.map(file => file.name.split('.')[0])
-
-        if (fileNames.includes('East')) {
-          mode = 'gamepad'
-        } else {
-          mode = 'keyboard'
-        }
-      }
-
       const toPath = join(await appDataDir(), 'custom-models', id)
 
-      await invoke(INVOKE_KEY.COPY_DIR, {
+      const importedModels = await invoke<ImportedModel[]>(INVOKE_KEY.IMPORT_MODEL, {
         fromPath,
         toPath,
       })
 
-      modelStore.models.push({
-        id,
-        path: toPath,
-        mode,
-        isPreset: false,
+      importedModels.forEach((model, index) => {
+        modelStore.models.push({
+          id: importedModels.length === 1 ? id : `${id}-${model.mode}-${index}`,
+          path: model.path,
+          mode: model.mode,
+          isPreset: false,
+        })
       })
 
       message.success(t('pages.preference.model.hints.importSuccess'))

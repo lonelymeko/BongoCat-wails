@@ -153,6 +153,12 @@ func (s *AppService) Remove(path string) error { return os.RemoveAll(path) }
 // CopyDir recursively copies a directory tree (replaces the copy_dir command).
 func (s *AppService) CopyDir(from, to string) error { return copyDir(from, to) }
 
+// ImportModel imports either a native BongoCat model directory or a legacy
+// Bongo Cat Mver package containing img/{standard,keyboard,gamepad}/cat_model.
+func (s *AppService) ImportModel(from, to string) ([]ImportedModel, error) {
+	return importModel(from, to)
+}
+
 // ---- clipboard ----
 
 func (s *AppService) WriteText(text string) { s.app.Clipboard.SetText(text) }

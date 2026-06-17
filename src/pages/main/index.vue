@@ -30,7 +30,7 @@ import { clearObject } from '@/utils/shared'
 
 const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
-const { modelSize, handleLoad, handleDestroy, handleResize, handleKeyChange } = useModel()
+const { modelSize, modelLayout, handleLoad, handleDestroy, handleResize, handleKeyChange } = useModel()
 const catStore = useCatStore()
 const { getBaseMenu, getExitMenu } = useAppMenu()
 const modelStore = useModelStore()
@@ -195,21 +195,25 @@ function handleMouseMove(event: MouseEvent) {
     <img
       v-if="backgroundImagePath"
       class="object-cover"
+      :class="modelLayout?.behindBase ? 'z-20' : 'z-0'"
       :src="backgroundImagePath"
     >
 
-    <canvas id="live2dCanvas" />
+    <canvas
+      id="live2dCanvas"
+      class="z-10"
+    />
 
     <img
       v-for="path in modelStore.pressedKeys"
       :key="path"
-      class="object-cover"
+      class="z-30 object-cover"
       :src="convertFileSrc(path)"
     >
 
     <div
       v-show="resizing || !modelStore.modelReady"
-      class="flex items-center justify-center bg-transparent"
+      class="z-40 flex items-center justify-center bg-transparent"
     >
       <span class="text-center text-[10vw] text-[#fff]">
         {{ resizing ? $t('pages.main.hints.redrawing') : $t('pages.main.hints.switching') }}

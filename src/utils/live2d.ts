@@ -7,7 +7,7 @@ import { groupBy } from 'es-toolkit/compat'
 import JSON5 from 'json5'
 import { Application, Ticker } from 'pixi.js'
 
-import type { ModelSize } from '@/composables/useModel'
+import type { ModelLayout, ModelSize } from '@/composables/useModel'
 
 import { i18n } from '@/locales'
 
@@ -92,18 +92,21 @@ class Live2d {
     this.model = null
   }
 
-  public resizeModel(modelSize: ModelSize) {
+  public resizeModel(modelSize: ModelSize, layout?: ModelLayout) {
     if (!this.model) return
 
     const { width, height } = modelSize
 
     const scaleX = innerWidth / width
     const scaleY = innerHeight / height
-    const scale = Math.min(scaleX, scaleY)
+    const baseScale = Math.min(scaleX, scaleY)
+    const layoutScale = layout?.scale ?? 1
+    const scale = baseScale * layoutScale
+    const mirror = layout?.mirror ? -1 : 1
 
-    this.model.scale.set(scale)
-    this.model.x = innerWidth / 2
-    this.model.y = innerHeight / 2
+    this.model.scale.set(scale * mirror, scale)
+    this.model.x = innerWidth / 2 + innerWidth * (layout?.offsetX ?? 0)
+    this.model.y = innerHeight / 2 + innerHeight * (layout?.offsetY ?? 0)
     this.model.anchor.set(0.5)
   }
 

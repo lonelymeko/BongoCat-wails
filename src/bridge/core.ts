@@ -11,6 +11,8 @@ export function invoke<T = any>(cmd: string, args?: Record<string, any>): Promis
     // utils: copy a model directory. Original call site passes { fromPath, toPath }.
     case 'copy_dir':
       return call('AppService', 'CopyDir', a.fromPath ?? a.from, a.toPath ?? a.to) as Promise<T>
+    case 'import_model':
+      return call('AppService', 'ImportModel', a.fromPath ?? a.from, a.toPath ?? a.to) as Promise<T>
 
     // device listener (rdev) — fire-and-forget on the Go side.
     case 'start_device_listening':

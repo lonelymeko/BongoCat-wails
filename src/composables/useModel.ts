@@ -1,8 +1,10 @@
 import type { PhysicalPosition } from '@tauri-apps/api/dpi'
 
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { LogicalSize } from '@tauri-apps/api/dpi'
 import { resolveResource, sep } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import { message } from 'antdv-next'
 import { isNil, round } from 'es-toolkit'
 import { findKey, nth } from 'es-toolkit/compat'
@@ -24,10 +26,19 @@ export interface ModelSize {
   height: number
 }
 
+export interface ModelLayout {
+  scale?: number
+  offsetX?: number
+  offsetY?: number
+  mirror?: boolean
+  behindBase?: boolean
+}
+
 export function useModel() {
   const modelStore = useModelStore()
   const catStore = useCatStore()
   const modelSize = ref<ModelSize>()
+  const modelLayout = ref<ModelLayout>()
 
   function getBehaviorShortcut(index: number) {
     const primary = isMac ? 'Command' : 'Control'
@@ -74,10 +85,13 @@ export function useModel() {
       await resolveResource(path)
 
       const { width, height, motions, expressions } = await live2d.load(path)
+      const backgroundSize = await readBackgroundSize(path)
+      const layout = await readModelLayout(path)
 
       const nextMotions = Object.entries(motions)
 
-      modelSize.value = { width, height }
+      modelSize.value = backgroundSize ?? { width, height }
+      modelLayout.value = layout
       modelStore.currentMotions = nextMotions
       modelStore.currentExpressions = expressions
 
@@ -115,10 +129,32 @@ export function useModel() {
     live2d.destroy()
   }
 
+  async function readBackgroundSize(path: string): Promise<ModelSize | null> {
+    const image = new Image()
+
+    return new Promise((resolve) => {
+      image.onload = () => {
+        const { naturalWidth: width, naturalHeight: height } = image
+
+        resolve(width > 0 && height > 0 ? { width, height } : null)
+      }
+      image.onerror = () => resolve(null)
+      image.src = convertFileSrc(`${path}${sep()}resources${sep()}background.png`)
+    })
+  }
+
+  async function readModelLayout(path: string): Promise<ModelLayout | undefined> {
+    try {
+      return JSON.parse(await readTextFile(`${path}${sep()}resources${sep()}layout.json`)) as ModelLayout
+    } catch {
+      return undefined
+    }
+  }
+
   async function handleResize() {
     if (!modelSize.value) return
 
-    live2d.resizeModel(modelSize.value)
+    live2d.resizeModel(modelSize.value, modelLayout.value)
 
     const { width, height } = modelSize.value
 
@@ -233,6 +269,7 @@ export function useModel() {
 
   return {
     modelSize,
+    modelLayout,
     handlePress,
     handleRelease,
     handleLoad,
