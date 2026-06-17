@@ -2,10 +2,12 @@ package main
 
 import (
 	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"bongocat/services"
 
@@ -25,6 +27,13 @@ var assets embed.FS
 //go:embed build/tray.png
 var trayIcon []byte
 
+// Bundled preset models (standard/keyboard/gamepad). Embedded so a packaged
+// app has them without a separate resource-copy step; extracted to a writable
+// dir on startup (see resolveResourceDir).
+//
+//go:embed all:src-tauri/assets/models
+var presetModels embed.FS
+
 const (
 	appName    = "BongoCat"
 	appVersion = "1.1.0"
@@ -40,9 +49,9 @@ const (
 var appRef *application.App
 
 func main() {
-	resourceDir := resolveResourceDir()
 	dataDir := userDir(appName)
 	logDir := filepath.Join(dataDir, "logs")
+	resourceDir := resolveResourceDir(dataDir)
 
 	app := application.New(application.Options{
 		Name:        appName,
@@ -225,11 +234,12 @@ func resourceMiddleware(next http.Handler) http.Handler {
 
 // resolveResourceDir locates the directory that contains the bundled "assets"
 // folder. Order: $BONGOCAT_RESOURCES, ./src-tauri (dev), the executable's dir.
-func resolveResourceDir() string {
+func resolveResourceDir(dataDir string) string {
 	if dir := os.Getenv("BONGOCAT_RESOURCES"); dir != "" {
 		return dir
 	}
 
+	// Dev: run from the repo root, use the on-disk assets directly.
 	if wd, err := os.Getwd(); err == nil {
 		dev := filepath.Join(wd, "src-tauri")
 		if _, err := os.Stat(filepath.Join(dev, "assets")); err == nil {
@@ -237,11 +247,52 @@ func resolveResourceDir() string {
 		}
 	}
 
+	// Packaged: extract the embedded preset models to a writable dir so
+	// resolveResource("assets/models") resolves to real files on disk.
+	resources := filepath.Join(dataDir, "resources")
+	if err := extractPresetModels(resources); err == nil {
+		return resources
+	}
+
 	if exe, err := os.Executable(); err == nil {
 		return filepath.Dir(exe)
 	}
 
 	return "."
+}
+
+// extractPresetModels writes the embedded preset models to <dst>/assets/models,
+// re-extracting only when the bundled app version changes.
+func extractPresetModels(dst string) error {
+	marker := filepath.Join(dst, ".preset-version")
+	if data, err := os.ReadFile(marker); err == nil && strings.TrimSpace(string(data)) == appVersion {
+		return nil
+	}
+
+	err := fs.WalkDir(presetModels, "src-tauri/assets/models", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Map "src-tauri/assets/models/..." -> "<dst>/assets/models/...".
+		rel := strings.TrimPrefix(path, "src-tauri/")
+		target := filepath.Join(dst, filepath.FromSlash(rel))
+
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+
+		data, err := presetModels.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, 0o644)
+	})
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(marker, []byte(appVersion), 0o644)
 }
 
 // userDir returns a per-user writable config directory for the app.
