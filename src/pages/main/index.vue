@@ -6,12 +6,15 @@ import { PhysicalSize } from '@tauri-apps/api/dpi'
 import { Menu, PredefinedMenuItem } from '@tauri-apps/api/menu'
 import { sep } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { exists, readDir } from '@tauri-apps/plugin-fs'
+import { exists, readDir, readTextFile } from '@tauri-apps/plugin-fs'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import { round } from 'es-toolkit'
 import { nth } from 'es-toolkit/compat'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import type { MverManifest } from '@/utils/mver'
+
+import MverStage from '@/components/mver-stage/index.vue'
 import { useAppMenu } from '@/composables/useAppMenu'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
@@ -37,6 +40,9 @@ const modelStore = useModelStore()
 const generalStore = useGeneralStore()
 const resizing = ref(false)
 const backgroundImagePath = ref<string>()
+// Set when the current model is a legacy Bongo-Cat-Mver package; the dedicated
+// MverStage renderer takes over and the BongoCat keycap path is skipped.
+const mverManifest = ref<MverManifest>()
 const { stickActive } = useGamepad()
 
 onMounted(() => {
@@ -60,6 +66,26 @@ useEventListener('resize', () => {
 
 watch(() => modelStore.currentModel, async (model) => {
   if (!model) return
+
+  // Legacy Bongo-Cat-Mver model: hand off to the dedicated MverStage renderer
+  // and skip the BongoCat Live2D + keycap path entirely.
+  const mverPath = join(model.path, 'mver.json')
+
+  if (await exists(mverPath)) {
+    mverManifest.value = JSON.parse(await readTextFile(mverPath)) as MverManifest
+
+    clearObject([modelStore.supportKeys, modelStore.pressedKeys])
+    backgroundImagePath.value = void 0
+
+    // The standard mode's Live2D body + procedural arm are a follow-up; for now
+    // MverStage draws the sprite layers (keyboard/gamepad are fully reproduced).
+    handleDestroy()
+
+    modelStore.modelReady = true
+    return
+  }
+
+  mverManifest.value = void 0
 
   await handleLoad()
 
@@ -92,6 +118,21 @@ watch([() => catStore.window.scale, modelSize], async ([scale, modelSize]) => {
   if (!modelSize) return
 
   const { width, height } = modelSize
+
+  await appWindow.setSize(
+    new PhysicalSize({
+      width: Math.round(width * (scale / 100)),
+      height: Math.round(height * (scale / 100)),
+    }),
+  )
+}, { immediate: true })
+
+// Mver models size the window from the manifest's native windowSize instead of
+// the Live2D model size.
+watch([() => catStore.window.scale, mverManifest], async ([scale, manifest]) => {
+  if (!manifest?.windowSize) return
+
+  const [width, height] = manifest.windowSize
 
   await appWindow.setSize(
     new PhysicalSize({
@@ -202,6 +243,14 @@ function handleMouseMove(event: MouseEvent) {
     <canvas
       id="live2dCanvas"
       class="z-10"
+    />
+
+    <MverStage
+      v-if="mverManifest && modelStore.currentModel"
+      :key="modelStore.currentModel.path"
+      class="z-10"
+      :manifest="mverManifest"
+      :path="modelStore.currentModel.path"
     />
 
     <img

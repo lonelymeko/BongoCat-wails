@@ -3,19 +3,20 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/draw"
-	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
+// ImportedModel is one model produced by an import (a BongoCat model, or one
+// mode of a legacy Bongo-Cat-Mver package).
 type ImportedModel struct {
 	Path string `json:"path"`
 	Mode string `json:"mode"`
 }
+
+// ---- legacy Bongo-Cat-Mver config (config.json) -----------------------------
 
 type mverConfig struct {
 	Decoration mverDecoration `json:"decoration"`
@@ -26,8 +27,14 @@ type mverConfig struct {
 
 type mverDecoration struct {
 	L2DCorrect        float64   `json:"l2d_correct"`
-	L2DOffset         []float64 `json:"l2d_offset"`
 	L2DHorizontalFlip bool      `json:"l2d_horizontal_flip"`
+	LeftHanded        bool      `json:"leftHanded"`
+	WindowSize        []int     `json:"window_size"`
+	OffsetX           []int     `json:"offsetX"`
+	OffsetY           []int     `json:"offsetY"`
+	Scalar            []float64 `json:"scalar"`
+	HandOffset        []int     `json:"hand_offset"`
+	ArmLineColor      []int     `json:"armLineColor"`
 }
 
 type mverModeConfig struct {
@@ -35,41 +42,65 @@ type mverModeConfig struct {
 	Hand      [][]int `json:"hand"`
 	LeftHand  [][]int `json:"lefthand"`
 	RightHand [][]int `json:"righthand"`
+	Face      [][]int `json:"face"`
 }
 
-type mverModeSpec struct {
-	mode           string
-	sourceDir      string
-	backgroundName string
-	leftDir        string
-	handDir        string
-	rightDir       string
-	leftCombos     [][]int
-	handCombos     [][]int
-	rightCombos    [][]int
-	layout         *modelLayout
+// ---- mver.json manifest (consumed by the frontend MverStage) ----------------
+//
+// Instead of lossily compositing Mver's full-frame sprite layers into BongoCat
+// keycap slots, we now PRESERVE Mver's images verbatim and emit a manifest that
+// lets the frontend replicate Mver's own draw logic (drawkeyboard = stack all
+// matching combos; drawhand = most-recently-pressed combo wins; standard mode
+// adds a procedural bezier arm + mouse-following device). See src/utils/mver.ts.
+
+type mverManifest struct {
+	Renderer   string                 `json:"renderer"` // always "mver"
+	Mode       string                 `json:"mode"`     // standard | keyboard | gamepad
+	WindowSize []int                  `json:"windowSize"`
+	CatModel   string                 `json:"catModel,omitempty"`   // dir holding cat.model3.json (standard)
+	Background string                 `json:"background,omitempty"` // relative png
+	Decoration mverManifestDecoration `json:"decoration"`
+	Device     *mverManifestDevice    `json:"device,omitempty"` // standard mouse/arm layer
+	Layers     map[string][]mverLayer `json:"layers"`           // category -> combos
+	Idle       map[string]string      `json:"idle,omitempty"`   // category -> idle image
 }
 
-type modelLayout struct {
-	Scale      float64 `json:"scale,omitempty"`
-	OffsetX    float64 `json:"offsetX,omitempty"`
-	OffsetY    float64 `json:"offsetY,omitempty"`
-	Mirror     bool    `json:"mirror,omitempty"`
-	BehindBase bool    `json:"behindBase,omitempty"`
+type mverManifestDecoration struct {
+	L2DCorrect float64 `json:"l2dCorrect"`
+	L2DFlip    bool    `json:"l2dFlip"`
+	LeftHanded bool    `json:"leftHanded"`
+	OffsetX    int     `json:"offsetX"`
+	OffsetY    int     `json:"offsetY"`
+	Scale      float64 `json:"scale"`
+	HandOffset []int   `json:"handOffset"`
+	ArmColor   []int   `json:"armColor"`
 }
+
+type mverManifestDevice struct {
+	Base  string `json:"base,omitempty"`
+	Left  string `json:"left,omitempty"`
+	Right string `json:"right,omitempty"`
+	Side  string `json:"side,omitempty"`
+	Arm   string `json:"arm,omitempty"`
+	Up    string `json:"up,omitempty"`
+}
+
+type mverLayer struct {
+	Keys []string `json:"keys"` // rdev-style key names (matches device-changed events)
+	Img  string   `json:"img"`  // relative image path, e.g. "keyboard/0.png"
+}
+
+// ---- entry point ------------------------------------------------------------
 
 func importModel(from, to string) ([]ImportedModel, error) {
 	from = filepath.Clean(from)
 
+	// Already a BongoCat model: copy as-is.
 	if hasFile(from, "cat.model3.json") {
 		if err := copyDir(from, to); err != nil {
 			return nil, err
 		}
-
-		return []ImportedModel{{
-			Path: to,
-			Mode: detectBongoModelMode(to),
-		}}, nil
+		return []ImportedModel{{Path: to, Mode: detectBongoModelMode(to)}}, nil
 	}
 
 	mverRoot, ok := findMverRoot(from)
@@ -85,40 +116,43 @@ func detectBongoModelMode(path string) string {
 	if err != nil {
 		return "standard"
 	}
-
 	for _, file := range files {
 		name := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 		if name == "East" {
 			return "gamepad"
 		}
 	}
-
 	if len(files) > 0 {
 		return "keyboard"
 	}
-
 	return "standard"
 }
 
 func findMverRoot(path string) (string, bool) {
-	candidates := []string{path, filepath.Join(path, "bongo cat mver0.1.6")}
-
+	candidates := []string{path}
 	if entries, err := os.ReadDir(path); err == nil {
 		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
+			if entry.IsDir() {
+				candidates = append(candidates, filepath.Join(path, entry.Name()))
 			}
-			candidates = append(candidates, filepath.Join(path, entry.Name()))
 		}
 	}
-
 	for _, candidate := range candidates {
-		if hasFile(candidate, "config.json") && hasFile(filepath.Join(candidate, "img", "standard", "cat_model"), "cat.model3.json") {
+		if hasFile(candidate, "config.json") &&
+			hasFile(filepath.Join(candidate, "img", "standard", "cat_model"), "cat.model3.json") {
 			return candidate, true
 		}
 	}
-
 	return "", false
+}
+
+// ---- mver import ------------------------------------------------------------
+
+// modeCategories returns the per-mode category->combos map and draw metadata.
+type modeSpec struct {
+	mode       string
+	categories map[string][][]int // category name -> combos
+	mouseIndex int                // which decoration offset/scalar slot to use
 }
 
 func importMverModel(root, to string) ([]ImportedModel, error) {
@@ -127,58 +161,60 @@ func importMverModel(root, to string) ([]ImportedModel, error) {
 		return nil, err
 	}
 
-	specs := []mverModeSpec{
+	specs := []modeSpec{
 		{
-			mode:           "standard",
-			sourceDir:      filepath.Join(root, "img", "standard"),
-			backgroundName: "mousebg.png",
-			leftDir:        "keyboard",
-			handDir:        "hand",
-			leftCombos:     config.Standard.Keyboard,
-			handCombos:     config.Standard.Hand,
-			layout:         config.standardLayout(),
+			mode:       "standard",
+			mouseIndex: 0,
+			categories: map[string][][]int{
+				"keyboard": config.Standard.Keyboard,
+				"hand":     config.Standard.Hand,
+				"face":     config.Standard.Face,
+			},
 		},
 		{
-			mode:           "keyboard",
-			sourceDir:      filepath.Join(root, "img", "keyboard"),
-			backgroundName: "bg.png",
-			leftDir:        "lefthand",
-			rightDir:       "righthand",
-			leftCombos:     config.Keyboard.LeftHand,
-			rightCombos:    config.Keyboard.RightHand,
+			mode:       "keyboard",
+			mouseIndex: 1,
+			categories: map[string][][]int{
+				"keyboard":  config.Keyboard.Keyboard,
+				"lefthand":  config.Keyboard.LeftHand,
+				"righthand": config.Keyboard.RightHand,
+				"face":      config.Keyboard.Face,
+			},
 		},
 		{
-			mode:           "gamepad",
-			sourceDir:      filepath.Join(root, "img", "gamepad"),
-			backgroundName: "bg.png",
-			leftDir:        "lefthand",
-			rightDir:       "righthand",
-			leftCombos:     config.Gamepad.LeftHand,
-			rightCombos:    config.Gamepad.RightHand,
+			mode:       "gamepad",
+			mouseIndex: 1,
+			categories: map[string][][]int{
+				"keyboard":  config.Gamepad.Keyboard,
+				"lefthand":  config.Gamepad.LeftHand,
+				"righthand": config.Gamepad.RightHand,
+				"face":      config.Gamepad.Face,
+			},
 		},
 	}
 
 	imported := make([]ImportedModel, 0, len(specs))
 	for _, spec := range specs {
-		if !hasFile(filepath.Join(spec.sourceDir, "cat_model"), "cat.model3.json") {
+		sourceDir := filepath.Join(root, "img", spec.mode)
+		if !hasPath(sourceDir) {
+			continue
+		}
+		// standard is the only Live2D mode and needs the cat model; keyboard /
+		// gamepad are pure 2D sprite modes.
+		if spec.mode == "standard" && !hasFile(filepath.Join(sourceDir, "cat_model"), "cat.model3.json") {
 			continue
 		}
 
 		modePath := filepath.Join(to, spec.mode)
-		if err := convertMverMode(spec, modePath); err != nil {
+		if err := emitMverMode(config, spec, sourceDir, modePath); err != nil {
 			return nil, err
 		}
-
-		imported = append(imported, ImportedModel{
-			Path: modePath,
-			Mode: spec.mode,
-		})
+		imported = append(imported, ImportedModel{Path: modePath, Mode: spec.mode})
 	}
 
 	if len(imported) == 0 {
 		return nil, fmt.Errorf("no importable Bongo Cat Mver modes found in %s", root)
 	}
-
 	return imported, nil
 }
 
@@ -188,244 +224,122 @@ func readMverConfig(path string) (mverConfig, error) {
 	if err != nil {
 		return config, err
 	}
-	err = json.Unmarshal(data, &config)
-	return config, err
+	return config, json.Unmarshal(data, &config)
 }
 
-func (c mverConfig) standardLayout() *modelLayout {
-	scale := c.Decoration.L2DCorrect
-	if scale == 0 {
-		scale = 1
-	}
-
-	layout := &modelLayout{
-		Scale:      scale,
-		Mirror:     c.Decoration.L2DHorizontalFlip,
-		BehindBase: true,
-	}
-
-	if len(c.Decoration.L2DOffset) > 0 {
-		layout.OffsetX = c.Decoration.L2DOffset[0]
-	}
-	if len(c.Decoration.L2DOffset) > 1 {
-		layout.OffsetY = c.Decoration.L2DOffset[1]
-	}
-
-	return layout
-}
-
-func convertMverMode(spec mverModeSpec, dst string) error {
+// emitMverMode copies one mode's images verbatim and writes its mver.json.
+func emitMverMode(config mverConfig, spec modeSpec, sourceDir, dst string) error {
 	if err := os.RemoveAll(dst); err != nil {
 		return err
 	}
-
-	if err := copyDir(filepath.Join(spec.sourceDir, "cat_model"), dst); err != nil {
+	// Preserve every Mver image (cat_model/, keyboard/, hand/, lefthand/,
+	// righthand/, face/, backgrounds, device sprites) at the same relative paths.
+	if err := copyDir(sourceDir, dst); err != nil {
 		return err
 	}
 
-	resourcesDir := filepath.Join(dst, "resources")
-	if err := os.MkdirAll(resourcesDir, 0o755); err != nil {
-		return err
-	}
+	manifest := buildManifest(config, spec, dst)
 
-	background := filepath.Join(spec.sourceDir, spec.backgroundName)
-	if !hasPath(background) {
-		background = firstExistingPath(
-			filepath.Join(spec.sourceDir, "mousebg.png"),
-			filepath.Join(spec.sourceDir, "tabletbg.png"),
-			filepath.Join(spec.sourceDir, "bg.png"),
-		)
-	}
-	if background == "" {
-		return fmt.Errorf("missing background image for %s", spec.mode)
-	}
-
-	if err := copyFile(background, filepath.Join(resourcesDir, "background.png")); err != nil {
-		return err
-	}
-	if err := copyFile(background, filepath.Join(resourcesDir, "cover.png")); err != nil {
-		return err
-	}
-	if spec.layout != nil {
-		data, err := json.Marshal(spec.layout)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(resourcesDir, "layout.json"), data, 0o644); err != nil {
-			return err
-		}
-	}
-
-	if err := copyMverKeyLayers(
-		filepath.Join(spec.sourceDir, spec.leftDir),
-		filepath.Join(spec.sourceDir, spec.handDir),
-		filepath.Join(resourcesDir, "left-keys"),
-		spec.leftCombos,
-		spec.handCombos,
-		spec.mode == "gamepad",
-		false,
-	); err != nil {
-		return err
-	}
-	if spec.rightDir != "" {
-		if err := copyMverKeyLayers(
-			filepath.Join(spec.sourceDir, spec.rightDir),
-			"",
-			filepath.Join(resourcesDir, "right-keys"),
-			spec.rightCombos,
-			nil,
-			spec.mode == "gamepad",
-			true,
-		); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func copyMverKeyLayers(srcDir, handDir, dstDir string, combos, handCombos [][]int, gamepad bool, right bool) error {
-	if len(combos) == 0 || !hasPath(srcDir) {
-		return nil
-	}
-
-	if err := os.MkdirAll(dstDir, 0o755); err != nil {
-		return err
-	}
-
-	for index, combo := range combos {
-		src := filepath.Join(srcDir, strconv.Itoa(index)+".png")
-		if !hasPath(src) {
-			continue
-		}
-
-		name := comboName(combo, gamepad, right, index)
-		if name == "" {
-			continue
-		}
-
-		dst := filepath.Join(dstDir, name+".png")
-		handSrc := matchingHandLayer(handDir, handCombos, combo, index)
-		if handSrc != "" {
-			if err := compositePNG(dst, src, handSrc); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := copyFile(src, dst); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func matchingHandLayer(handDir string, handCombos [][]int, combo []int, fallbackIndex int) string {
-	if handDir == "" || !hasPath(handDir) {
-		return ""
-	}
-
-	index := fallbackIndex
-	for i, handCombo := range handCombos {
-		if intSliceEqual(handCombo, combo) {
-			index = i
-			break
-		}
-	}
-
-	path := filepath.Join(handDir, strconv.Itoa(index)+".png")
-	if hasPath(path) {
-		return path
-	}
-
-	return ""
-}
-
-func intSliceEqual(a, b []int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func compositePNG(dst string, layers ...string) error {
-	var canvas *image.RGBA
-
-	for _, layer := range layers {
-		img, err := decodePNG(layer)
-		if err != nil {
-			return err
-		}
-
-		bounds := img.Bounds()
-		if canvas == nil {
-			canvas = image.NewRGBA(bounds)
-		}
-
-		draw.Draw(canvas, bounds, img, bounds.Min, draw.Over)
-	}
-
-	if canvas == nil {
-		return fmt.Errorf("no layers to composite")
-	}
-
-	out, err := os.Create(dst)
+	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-
-	return png.Encode(out, canvas)
+	return os.WriteFile(filepath.Join(dst, "mver.json"), data, 0o644)
 }
 
-func decodePNG(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
+func buildManifest(config mverConfig, spec modeSpec, dst string) mverManifest {
+	dec := config.Decoration
+
+	manifest := mverManifest{
+		Renderer:   "mver",
+		Mode:       spec.mode,
+		WindowSize: dec.WindowSize,
+		Layers:     map[string][]mverLayer{},
+		Idle:       map[string]string{},
+		Decoration: mverManifestDecoration{
+			L2DCorrect: orDefault(dec.L2DCorrect, 1),
+			L2DFlip:    dec.L2DHorizontalFlip,
+			LeftHanded: dec.LeftHanded,
+			OffsetX:    nthInt(dec.OffsetX, spec.mouseIndex),
+			OffsetY:    nthInt(dec.OffsetY, spec.mouseIndex),
+			Scale:      orDefault(nthFloat(dec.Scalar, spec.mouseIndex), 1),
+			HandOffset: dec.HandOffset,
+			ArmColor:   dec.ArmLineColor,
+		},
 	}
-	defer file.Close()
 
-	return png.Decode(file)
-}
+	// Only standard mode renders the Live2D body; keyboard/gamepad are 2D only.
+	if spec.mode == "standard" && hasFile(filepath.Join(dst, "cat_model"), "cat.model3.json") {
+		manifest.CatModel = "cat_model"
+	}
 
-func comboName(combo []int, gamepad bool, right bool, index int) string {
-	if gamepad {
-		if right {
-			names := []string{"South", "East", "West", "North", "RightTrigger", "RightTrigger2"}
-			if index < len(names) {
-				return names[index]
+	// Background: prefer the live2d-specific backgrounds, then plain ones.
+	manifest.Background = firstExistingRel(dst,
+		"l2dmousebg.png", "l2dtabletbg.png", "mousebg.png", "tabletbg.png", "bg.png")
+
+	// Build the per-category combo layers, mapping each combo's key codes to the
+	// rdev-style names emitted by DeviceService, paired with category/<i>.png.
+	for category, combos := range spec.categories {
+		layers := make([]mverLayer, 0, len(combos))
+		for i, combo := range combos {
+			img := filepath.Join(category, strconv.Itoa(i)+".png")
+			if !hasPath(filepath.Join(dst, img)) {
+				continue
 			}
-		} else {
-			names := []string{"DPadUp", "DPadRight", "DPadDown", "DPadLeft", "LeftTrigger", "LeftTrigger2"}
-			if index < len(names) {
-				return names[index]
-			}
+			layers = append(layers, mverLayer{
+				Keys: comboKeyNames(combo),
+				Img:  filepath.ToSlash(img),
+			})
+		}
+		if len(layers) > 0 {
+			manifest.Layers[category] = layers
 		}
 	}
 
-	for i := len(combo) - 1; i >= 0; i-- {
-		if name := windowsVirtualKeyName(combo[i]); name != "" {
-			return name
+	// Idle (key-up) images for the hand layers.
+	addIdle(manifest.Idle, dst, "hand", "up.png")
+	addIdle(manifest.Idle, dst, "lefthand", "lefthand/leftup.png")
+	addIdle(manifest.Idle, dst, "righthand", "righthand/rightup.png")
+
+	// Standard mode draws a procedural arm + mouse-following device sprites.
+	if spec.mode == "standard" {
+		manifest.Device = &mverManifestDevice{
+			Base:  relIfExists(dst, "mouse.png"),
+			Left:  relIfExists(dst, "mouse_left.png"),
+			Right: relIfExists(dst, "mouse_right.png"),
+			Side:  relIfExists(dst, "mouse_side.png"),
+			Arm:   relIfExists(dst, "arm.png"),
+			Up:    relIfExists(dst, "up.png"),
 		}
 	}
 
-	return ""
+	return manifest
+}
+
+// comboKeyNames maps a Bongo-Cat-Mver key combo (Windows virtual-key codes) to
+// the rdev-style names the frontend matches against. Modifier codes map to the
+// base name (e.g. "Shift"); the frontend normalises "ShiftLeft"/"ShiftRight"
+// down to "Shift" so the match still works.
+func comboKeyNames(combo []int) []string {
+	names := make([]string, 0, len(combo))
+	for _, code := range combo {
+		if name := windowsVirtualKeyName(code); name != "" {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 func windowsVirtualKeyName(code int) string {
 	switch {
-	case code >= 65 && code <= 90:
+	case code >= 65 && code <= 90: // A-Z
 		return "Key" + string(rune(code))
-	case code >= 48 && code <= 57:
+	case code >= 48 && code <= 57: // 0-9
 		return "Num" + string(rune(code))
-	case code >= 96 && code <= 105:
+	case code >= 96 && code <= 105: // numpad 0-9
 		return "Num" + strconv.Itoa(code-96)
+	case code >= 112 && code <= 123: // F1-F12
+		return "F" + strconv.Itoa(code-111)
 	}
 
 	switch code {
@@ -433,6 +347,8 @@ func windowsVirtualKeyName(code int) string {
 		return "Left"
 	case 2:
 		return "Right"
+	case 4:
+		return "Middle"
 	case 8:
 		return "Backspace"
 	case 9:
@@ -490,13 +406,55 @@ func windowsVirtualKeyName(code int) string {
 	}
 }
 
-func firstExistingPath(paths ...string) string {
-	for _, path := range paths {
-		if hasPath(path) {
-			return path
+// ---- small helpers ----------------------------------------------------------
+
+func addIdle(idle map[string]string, dst, category, rel string) {
+	if hasPath(filepath.Join(dst, filepath.FromSlash(rel))) {
+		idle[category] = rel
+	}
+}
+
+func relIfExists(dst, rel string) string {
+	if hasPath(filepath.Join(dst, filepath.FromSlash(rel))) {
+		return rel
+	}
+	return ""
+}
+
+func firstExistingRel(dst string, rels ...string) string {
+	for _, rel := range rels {
+		if hasPath(filepath.Join(dst, filepath.FromSlash(rel))) {
+			return rel
 		}
 	}
 	return ""
+}
+
+func orDefault(v, def float64) float64 {
+	if v == 0 {
+		return def
+	}
+	return v
+}
+
+func nthInt(s []int, i int) int {
+	if i >= 0 && i < len(s) {
+		return s[i]
+	}
+	if len(s) > 0 {
+		return s[0]
+	}
+	return 0
+}
+
+func nthFloat(s []float64, i int) float64 {
+	if i >= 0 && i < len(s) {
+		return s[i]
+	}
+	if len(s) > 0 {
+		return s[0]
+	}
+	return 0
 }
 
 func hasFile(dir, name string) bool {
