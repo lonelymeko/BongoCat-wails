@@ -26,7 +26,10 @@
           "behavior": "動作與表情",
           "autoReleaseDelay": "按鍵自動釋放延遲",
           "hideOnHover": "滑鼠游標移入隱藏",
-          "maxFPS": "最大幀率"
+          "maxFPS": "最大幀率",
+          "modelZoom": "模型縮放",
+          "modelOffsetX": "水平偏移",
+          "modelOffsetY": "垂直偏移"
         },
         "hints": {
           "mirrorMode": "啟用後，模型將水平鏡像翻轉。",

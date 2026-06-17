@@ -26,7 +26,10 @@
           "behavior": "Hành động và Biểu cảm",
           "autoReleaseDelay": "Độ trễ tự động nhả phím",
           "hideOnHover": "Ẩn khi di chuột",
-          "maxFPS": "Tốc độ khung hình tối đa"
+          "maxFPS": "Tốc độ khung hình tối đa",
+          "modelZoom": "Thu phóng mô hình",
+          "modelOffsetX": "Lệch ngang",
+          "modelOffsetY": "Lệch dọc"
         },
         "hints": {
           "mirrorMode": "Bật để lật ngang mô hình.",

@@ -151,10 +151,24 @@ export function useModel() {
     }
   }
 
+  // Apply the model's own layout plus the user's per-window zoom/offset (Cat
+  // settings), so converted Mver models can be scaled/positioned to line up
+  // with their full-frame keycaps. Does NOT resize the window.
+  function applyTransform() {
+    if (!modelSize.value) return
+
+    live2d.resizeModel(modelSize.value, {
+      ...modelLayout.value,
+      scale: (modelLayout.value?.scale ?? 1) * (catStore.model.zoom / 100),
+      offsetX: (modelLayout.value?.offsetX ?? 0) + catStore.model.offsetX / 100,
+      offsetY: (modelLayout.value?.offsetY ?? 0) + catStore.model.offsetY / 100,
+    })
+  }
+
   async function handleResize() {
     if (!modelSize.value) return
 
-    live2d.resizeModel(modelSize.value, modelLayout.value)
+    applyTransform()
 
     const { width, height } = modelSize.value
 
@@ -270,6 +284,7 @@ export function useModel() {
   return {
     modelSize,
     modelLayout,
+    applyTransform,
     handlePress,
     handleRelease,
     handleLoad,

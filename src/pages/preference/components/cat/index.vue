@@ -32,6 +32,38 @@ const catStore = useCatStore()
       <Switch v-model:checked="catStore.model.ignoreMouse" />
     </ProListItem>
 
+    <ProListItem :title="$t('pages.preference.cat.labels.modelZoom')">
+      <Slider
+        v-model:value="catStore.model.zoom"
+        class="w-40"
+        :max="200"
+        :min="10"
+        :tooltip="{
+          formatter(value) {
+            return `${value}%`
+          },
+        }"
+      />
+    </ProListItem>
+
+    <ProListItem :title="$t('pages.preference.cat.labels.modelOffsetX')">
+      <Slider
+        v-model:value="catStore.model.offsetX"
+        class="w-40"
+        :max="50"
+        :min="-50"
+      />
+    </ProListItem>
+
+    <ProListItem :title="$t('pages.preference.cat.labels.modelOffsetY')">
+      <Slider
+        v-model:value="catStore.model.offsetY"
+        class="w-40"
+        :max="50"
+        :min="-50"
+      />
+    </ProListItem>
+
     <ProListItem
       :description="$t('pages.preference.cat.hints.motionSound')"
       :title="$t('pages.preference.cat.labels.motionSound')"

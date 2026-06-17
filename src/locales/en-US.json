@@ -26,7 +26,10 @@
           "behavior": "Motions and Expressions",
           "autoReleaseDelay": "Auto Release Delay",
           "hideOnHover": "Hide on Hover",
-          "maxFPS": "Max Frame Rate"
+          "maxFPS": "Max Frame Rate",
+          "modelZoom": "Model Zoom",
+          "modelOffsetX": "Horizontal Offset",
+          "modelOffsetY": "Vertical Offset"
         },
         "hints": {
           "mirrorMode": "When enabled, the model will be mirrored horizontally.",

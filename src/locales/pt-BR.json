@@ -26,7 +26,10 @@
           "behavior": "Movimentos e Expressões",
           "autoReleaseDelay": "Atraso de Liberação Automática",
           "hideOnHover": "Ocultar ao Passar o Mouse",
-          "maxFPS": "Taxa Máxima de Quadros"
+          "maxFPS": "Taxa Máxima de Quadros",
+          "modelZoom": "Zoom do Modelo",
+          "modelOffsetX": "Deslocamento Horizontal",
+          "modelOffsetY": "Deslocamento Vertical"
         },
         "hints": {
           "mirrorMode": "Quando ativado, o modelo será invertido horizontalmente.",

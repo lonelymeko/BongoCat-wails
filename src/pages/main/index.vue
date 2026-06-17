@@ -33,7 +33,7 @@ import { clearObject } from '@/utils/shared'
 
 const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
-const { modelSize, modelLayout, handleLoad, handleDestroy, handleResize, handleKeyChange } = useModel()
+const { modelSize, modelLayout, applyTransform, handleLoad, handleDestroy, handleResize, handleKeyChange } = useModel()
 const catStore = useCatStore()
 const { getBaseMenu, getExitMenu } = useAppMenu()
 const modelStore = useModelStore()
@@ -163,6 +163,12 @@ watch([() => catStore.window.scale, mverManifest], async ([scale, manifest]) => 
     }),
   )
 }, { immediate: true })
+
+// Re-apply the model transform when the user changes zoom/offset.
+watch(
+  [() => catStore.model.zoom, () => catStore.model.offsetX, () => catStore.model.offsetY],
+  () => applyTransform(),
+)
 
 watch([modelStore.pressedKeys, stickActive], ([keys, stickActive]) => {
   const dirs = Object.values(keys).map((path) => {

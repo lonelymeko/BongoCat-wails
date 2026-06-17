@@ -10,6 +10,15 @@ export interface CatStore {
     autoReleaseDelay: number
     maxFPS: number
     ignoreMouse: boolean
+    /**
+     * Model zoom within the window, in percent (default 100). Lets converted
+     * Bongo-Cat-Mver models be scaled to match their full-frame keycaps.
+     */
+    zoom: number
+    /** Horizontal model offset, percent of window width (-100..100). */
+    offsetX: number
+    /** Vertical model offset, percent of window height (-100..100). */
+    offsetY: number
   }
   window: {
     visible: boolean
@@ -56,6 +65,9 @@ export const useCatStore = defineStore('cat', () => {
     autoReleaseDelay: 3,
     maxFPS: 60,
     ignoreMouse: false,
+    zoom: 100,
+    offsetX: 0,
+    offsetY: 0,
   })
 
   const window = reactive<CatStore['window']>({
