@@ -40,10 +40,25 @@ const modelStore = useModelStore()
 const generalStore = useGeneralStore()
 const resizing = ref(false)
 const backgroundImagePath = ref<string>()
+// The window/scene size is defined by the background image (the desk/keyboard),
+// which the Live2D model + full-frame keycaps are all designed to overlay. For
+// BongoCat presets bg == model size (no change); for converted Bongo-Cat-Mver
+// models the bg/keycaps are larger than the Live2D canvas, so sizing the window
+// to the bg keeps the character and the keypress hand at the same scale.
+const sceneSize = ref<{ width: number, height: number }>()
 // Set when the current model is a legacy Bongo-Cat-Mver package; the dedicated
 // MverStage renderer takes over and the BongoCat keycap path is skipped.
 const mverManifest = ref<MverManifest>()
 const { stickActive } = useGamepad()
+
+function imageSize(url: string) {
+  return new Promise<{ width: number, height: number } | undefined>((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = () => resolve(void 0)
+    img.src = url
+  })
+}
 
 onMounted(() => {
   void (appWindow as any).setBackgroundColour?.(0, 0, 0, 0)
@@ -94,6 +109,9 @@ watch(() => modelStore.currentModel, async (model) => {
 
   backgroundImagePath.value = existed ? convertFileSrc(path) : void 0
 
+  // Size the window/scene to the background image, not the Live2D canvas.
+  sceneSize.value = existed ? await imageSize(backgroundImagePath.value!) : void 0
+
   clearObject([modelStore.supportKeys, modelStore.pressedKeys])
 
   const resourcePath = join(model.path, 'resources')
@@ -114,10 +132,14 @@ watch(() => modelStore.currentModel, async (model) => {
   modelStore.modelReady = true
 }, { deep: true, immediate: true })
 
-watch([() => catStore.window.scale, modelSize], async ([scale, modelSize]) => {
-  if (!modelSize) return
+watch([() => catStore.window.scale, sceneSize, modelSize], async ([scale, sceneSize, modelSize]) => {
+  // Prefer the background/scene size so the Live2D model and the full-frame
+  // keycaps share one coordinate space; fall back to the model size.
+  const size = sceneSize ?? modelSize
 
-  const { width, height } = modelSize
+  if (!size) return
+
+  const { width, height } = size
 
   await appWindow.setSize(
     new PhysicalSize({
