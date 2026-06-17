@@ -94,5 +94,35 @@ export function getCurrentWebviewWindow() {
         cb({ payload: e.payload })
       })
     },
+
+    // Window dragging is handled by Wails via the CSS `--wails-draggable: drag`
+    // already set on the main container, so this is a no-op (kept for parity).
+    async startDragging(): Promise<void> {},
+
+    async setTitle(title: string): Promise<void> {
+      await Window.SetTitle(title)
+    },
+
+    // Theme helpers — the Wails alpha has no JS theme API, so we derive the
+    // system theme from the media query and let the app apply it.
+    async theme(): Promise<'light' | 'dark'> {
+      return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    },
+
+    async setTheme(_theme?: 'light' | 'dark' | null): Promise<void> {},
+
+    onThemeChanged(cb: (e: { payload: 'light' | 'dark' }) => void): Promise<UnlistenFn> {
+      const mql = matchMedia('(prefers-color-scheme: dark)')
+      const handler = () => cb({ payload: mql.matches ? 'dark' : 'light' })
+      mql.addEventListener('change', handler)
+      return Promise.resolve(() => mql.removeEventListener('change', handler))
+    },
+
+    // Native file drag-and-drop isn't wired in the Wails port yet (needs
+    // EnableFileDrop + a runtime event); importing via the click/file-picker
+    // works. This no-op keeps the upload component from throwing on mount.
+    onDragDropEvent(_cb: (e: any) => void): Promise<UnlistenFn> {
+      return Promise.resolve(() => {})
+    },
   }
 }
