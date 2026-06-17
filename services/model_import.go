@@ -199,11 +199,6 @@ func importMverModel(root, to string) ([]ImportedModel, error) {
 		if !hasPath(sourceDir) {
 			continue
 		}
-		// standard is the only Live2D mode and needs the cat model; keyboard /
-		// gamepad are pure 2D sprite modes.
-		if spec.mode == "standard" && !hasFile(filepath.Join(sourceDir, "cat_model"), "cat.model3.json") {
-			continue
-		}
 
 		modePath := filepath.Join(to, spec.mode)
 		if err := emitMverMode(config, spec, sourceDir, modePath); err != nil {
@@ -227,24 +222,93 @@ func readMverConfig(path string) (mverConfig, error) {
 	return config, json.Unmarshal(data, &config)
 }
 
-// emitMverMode copies one mode's images verbatim and writes its mver.json.
+// emitMverMode converts one Mver mode. Modern Mver models are Live2D-centric:
+// the visible character is the Cubism `cat_model` (the cat/avatar), animated via
+// the model's own motions/expressions — NOT the 2D cat-paw sprites. For those we
+// emit a plain BongoCat-compatible Live2D model so the existing (tested) Live2D
+// renderer draws the character. Only genuinely sprite-based modes (no cat_model)
+// fall back to the full-frame MverStage + mver.json.
 func emitMverMode(config mverConfig, spec modeSpec, sourceDir, dst string) error {
 	if err := os.RemoveAll(dst); err != nil {
 		return err
 	}
-	// Preserve every Mver image (cat_model/, keyboard/, hand/, lefthand/,
-	// righthand/, face/, backgrounds, device sprites) at the same relative paths.
+
+	if hasFile(filepath.Join(sourceDir, "cat_model"), "cat.model3.json") {
+		return emitLive2DModel(config, sourceDir, dst)
+	}
+
+	// Pure 2D sprite mode: preserve images verbatim and drive them via mver.json.
 	if err := copyDir(sourceDir, dst); err != nil {
 		return err
 	}
-
 	manifest := buildManifest(config, spec, dst)
-
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dst, "mver.json"), data, 0o644)
+}
+
+type bongoLayout struct {
+	Scale      float64 `json:"scale,omitempty"`
+	Mirror     bool    `json:"mirror,omitempty"`
+	BehindBase bool    `json:"behindBase,omitempty"`
+}
+
+// emitLive2DModel writes a BongoCat-compatible model: the Cubism model files at
+// the root, plus resources/{background,cover,layout}. No keycaps, so no wrong
+// overlays — just the character + the desk/device background.
+func emitLive2DModel(config mverConfig, sourceDir, dst string) error {
+	// Cubism model (cat.model3.json + moc3 + textures + physics/pose) at root.
+	if err := copyDir(filepath.Join(sourceDir, "cat_model"), dst); err != nil {
+		return err
+	}
+
+	resources := filepath.Join(dst, "resources")
+	if err := os.MkdirAll(resources, 0o755); err != nil {
+		return err
+	}
+
+	// Background (the desk / tablet / controller the character sits at).
+	bg := firstExistingAbs(sourceDir,
+		"l2dmousebg.png", "l2dtabletbg.png", "mousebg.png", "tabletbg.png", "bg.png")
+	if bg != "" {
+		if err := copyFile(bg, filepath.Join(resources, "background.png")); err != nil {
+			return err
+		}
+	}
+
+	// Card cover: prefer the model's cat.png preview, else the background.
+	cover := filepath.Join(sourceDir, "cat.png")
+	if !hasPath(cover) {
+		cover = bg
+	}
+	if cover != "" {
+		if err := copyFile(cover, filepath.Join(resources, "cover.png")); err != nil {
+			return err
+		}
+	}
+
+	layout := bongoLayout{
+		Scale:      orDefault(config.Decoration.L2DCorrect, 1),
+		Mirror:     config.Decoration.L2DHorizontalFlip,
+		BehindBase: true,
+	}
+	data, err := json.MarshalIndent(layout, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(resources, "layout.json"), data, 0o644)
+}
+
+func firstExistingAbs(dir string, names ...string) string {
+	for _, name := range names {
+		p := filepath.Join(dir, name)
+		if hasPath(p) {
+			return p
+		}
+	}
+	return ""
 }
 
 func buildManifest(config mverConfig, spec modeSpec, dst string) mverManifest {
