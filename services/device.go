@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -60,15 +61,29 @@ func (s *DeviceService) StartListening() {
 
 	startPlatformInputListener(s)
 
-	go s.loop()
+	// On macOS the native CGEventTap (startPlatformInputListener) is the input
+	// backend and every gohook event is discarded by handleHook*Events(). Starting
+	// gohook there only spins up a second, crash-prone native run loop (the source
+	// of the SIGSEGV in gohook's C code), so skip it. On other platforms gohook IS
+	// the backend and the loop must run.
+	if platformUsesGohook() {
+		go s.loop()
+	}
 }
 
 func (s *DeviceService) loop() {
+	// A panic in event handling (e.g. Event.Emit after the app is tearing down)
+	// must not crash the whole process; recover and let the loop exit. Note this
+	// only catches Go-side panics — a native SIGSEGV inside gohook's C run loop
+	// cannot be recovered, which is why gohook is not started on macOS at all.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("device: recovered from panic in gohook loop: %v", r)
+		}
+	}()
+
 	// hook.Start returns a channel of raw events. The hook runs its own native
 	// run loop in C, so consuming from a goroutine is safe.
-	//
-	// macOS note: this requires the "Input Monitoring" permission to be granted
-	// to the app, otherwise no events are delivered.
 	evChan := hook.Start()
 	defer hook.End()
 
@@ -183,6 +198,12 @@ func (s *DeviceService) watchMouseRelease(name string) {
 	s.mu.Unlock()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("device: recovered from panic in mouse-release watcher: %v", r)
+			}
+		}()
+
 		ticker := time.NewTicker(8 * time.Millisecond)
 		defer ticker.Stop()
 
