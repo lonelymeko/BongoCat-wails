@@ -127,6 +127,39 @@ tasks:
     cmds:
       - task: create:app:bundle
 
+  dmg:
+    summary: Packages the .app into a distributable .dmg (macOS only)
+    desc: |
+      One command: build -> .app -> ad-hoc sign -> .dmg into bin/.
+      Override the disk image name with: task darwin:dmg DMG_NAME=MyName
+      Requires create-dmg: brew install create-dmg
+    deps:
+      - task: package
+    cmds:
+      - task: create:dmg
+        vars:
+          DMG_NAME: '{{.DMG_NAME | default .APP_NAME}}'
+
+  create:dmg:
+    internal: true
+    preconditions:
+      - sh: command -v create-dmg >/dev/null 2>&1
+        msg: 'create-dmg not found. Install it with: brew install create-dmg'
+    cmds:
+      # Strip quarantine so the ad-hoc signed app opens without Gatekeeper nagging.
+      - xattr -cr "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+      - rm -f "{{.BIN_DIR}}/{{.DMG_NAME}}.dmg"
+      - |
+        create-dmg \
+          --volname "{{.DMG_NAME}}" \
+          --window-pos 200 120 \
+          --window-size 600 400 \
+          --icon-size 100 \
+          --icon "{{.APP_NAME}}.app" 150 185 \
+          --app-drop-link 450 185 \
+          "{{.BIN_DIR}}/{{.DMG_NAME}}.dmg" \
+          "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+
   create:app:bundle:
     summary: Creates an `.app` bundle
     cmds:

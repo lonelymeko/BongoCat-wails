@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  APP_NAME: BongoCat
+  APP_NAME: BongoCatWails3
   BIN_DIR: bin
   BIN: '{{.BIN_DIR}}/{{.APP_NAME}}{{if eq OS "windows"}}.exe{{end}}'
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "pnpm"}}'
