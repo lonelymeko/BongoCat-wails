@@ -35,7 +35,7 @@ var trayIcon []byte
 var presetModels embed.FS
 
 const (
-	appName    = "BongoCat"
+	appName    = "BongoCatWails3"
 	appVersion = "1.1.0"
 
 	// resourceQueryPath is the URL the frontend's convertFileSrc() points at to
@@ -61,7 +61,7 @@ func main() {
 			Middleware: resourceMiddleware,
 		},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "com.ayangweb.BongoCat",
+			UniqueID: "com.ayangweb.BongoCatWails3",
 			// A second launch surfaces the preferences window instead of
 			// starting a new process (mirrors the Tauri single-instance plugin).
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
