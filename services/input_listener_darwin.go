@@ -133,6 +133,13 @@ func startPlatformInputListener(s *DeviceService) {
 	go C.bongo_start_input_tap()
 }
 
+// platformUsesGohook reports whether the gohook run loop should be started.
+// macOS uses the native CGEventTap above instead, and starting gohook here
+// only adds a crash-prone second run loop, so it is disabled.
+func platformUsesGohook() bool {
+	return false
+}
+
 func handleHookKeyboardEvents() bool {
 	return false
 }
